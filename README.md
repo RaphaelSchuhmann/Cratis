@@ -4,14 +4,14 @@
 
 ---
 
-## 🧠 Features
+## 🧠 Features (WIP)
 
-- ✅ Real-time file watching using a cross-platform watcher.
-- 🕒 Timestamp-based versioning of individual files.
-- 📦 Flat file storage with a lightweight embedded database (powered by `sled`).
-- 🌐 HTTP API to manage uploads, snapshots, and restore operations.
-- 🔐 Local/private use, no cloud dependency.
-- 🧩 Modular and customizable for advanced setups.
+- Real-time file watching using a cross-platform watcher.
+- Timestamp-based versioning of individual files.
+- Flat file storage with a lightweight embedded database (powered by `sled`).
+- HTTP API to manage uploads, snapshots, and restore operations.
+- Local/private use, no cloud dependency.
+- Modular and customizable for advanced setups.
 
 ---
 ## Authors
