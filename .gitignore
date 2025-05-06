@@ -23,3 +23,7 @@ target/
 # Datasource local storage ignored files
 /dataSources/
 /dataSources.local.xml
+
+# Verbaq
+# Any .yml config files
+*.yml
