@@ -25,5 +25,6 @@ target/
 /dataSources.local.xml
 
 # Verbaq
-# Any .yml config files
+# Any config files
 *.yml
+*.yaml
