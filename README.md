@@ -1,6 +1,6 @@
-# Verbaq
+# Cratis
 
-**Verbaq** is a versioned backup system built in Rust for privacy-focused, local-first environments. It tracks changes in files, stores timestamped versions, and enables powerful time-based snapshot restoration.
+**Cratis** is a versioned backup system built in Rust for privacy-focused, local-first environments. It tracks changes in files, stores timestamped versions, and enables powerful time-based snapshot restoration.
 
 ---
 
