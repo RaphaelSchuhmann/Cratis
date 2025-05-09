@@ -1,5 +1,6 @@
 mod cratis_config;
 
+/// ```
 fn main() {
     // Get this via an initial command from user after configuring cratis.yml
     cratis_config::load_config("cratis.yml");
