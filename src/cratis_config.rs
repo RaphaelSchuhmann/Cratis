@@ -48,12 +48,37 @@ pub struct AdvancedConfig {
 
 static CONFIG: OnceCell<CratisConfig> = OnceCell::new();
 
+/// Loads the application configuration from a YAML file and initializes the global configuration.
+///
+/// Reads the configuration file at the specified path, parses its contents as YAML into a `CratisConfig` instance, and stores it in the global configuration container. Panics if the file cannot be read, the YAML is invalid, or the configuration has already been initialized.
+///
+/// # Examples
+///
+/// ```
+/// load_config("config.yaml");
+/// let config = get_config();
+/// assert_eq!(config.client.name, "example-client");
+/// ```
 pub fn load_config(path: &str) {
     let contents = fs::read_to_string(path).expect("Failed to read config file");
     let parsed: CratisConfig = serde_yaml::from_str(&contents).expect("Invalid YAML format");
     CONFIG.set(parsed).expect("Config already initialized");
 }
 
+/// Returns a reference to the globally loaded application configuration.
+///
+/// Panics if the configuration has not been initialized with `load_config`.
+///
+/// # Examples
+///
+/// ```
+/// // Initialize configuration once at startup
+/// load_config("config.yaml");
+///
+/// // Access configuration anywhere after initialization
+/// let config = get_config();
+/// assert_eq!(config.client.name, "example-client");
+/// ```
 pub fn get_config() -> &'static CratisConfig {
     CONFIG.get().expect("Config not initialized")
 }
