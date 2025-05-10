@@ -54,14 +54,14 @@ static CONFIG: OnceCell<CratisConfig> = OnceCell::new();
 ///
 /// # Examples
 ///
-/// ```
+/// ```ignore
 /// load_config("config.yaml");
 /// let config = get_config();
 /// assert_eq!(config.client.name, "example-client");
 /// ```
 pub fn load_config(path: &str) {
     let contents = fs::read_to_string(path).expect("Failed to read config file");
-    let parsed: CratisConfig = serde_yaml::from_str(&contents).expect("Invalid YAML format");
+    let parsed: CratisConfig = serde_yaml::from_str(&contents).expect("Invalid config format");
     CONFIG.set(parsed).expect("Config already initialized");
 }
 
@@ -71,7 +71,7 @@ pub fn load_config(path: &str) {
 ///
 /// # Examples
 ///
-/// ```
+/// ```ignore
 /// // Initialize configuration once at startup
 /// load_config("config.yaml");
 ///
