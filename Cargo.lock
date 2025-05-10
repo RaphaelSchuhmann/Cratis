@@ -3,7 +3,18 @@
 version = 4
 
 [[package]]
-name = "Cratis"
+name = "cratis-api"
+version = "0.1.0"
+
+[[package]]
+name = "cratis-cli"
+version = "0.1.0"
+dependencies = [
+ "cratis-core",
+]
+
+[[package]]
+name = "cratis-core"
 version = "0.1.0"
 dependencies = [
  "once_cell",
