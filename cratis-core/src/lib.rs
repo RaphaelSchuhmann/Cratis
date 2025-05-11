@@ -1,2 +1,2 @@
-pub mod cratis_config;
-pub mod cratis_error;
+pub mod config;
+pub mod error;
