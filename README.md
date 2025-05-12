@@ -11,7 +11,6 @@
 - Flat file storage with a lightweight embedded database (powered by `sled`).
 - HTTP API to manage uploads, snapshots, and restore operations.
 - Local/private use, no cloud dependency.
-- Modular and customizable for advanced setups.
 
 ---
 ## Authors
