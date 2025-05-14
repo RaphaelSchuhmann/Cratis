@@ -12,6 +12,9 @@ pub enum CratisError {
     #[error("Invalid input provided: {0}")]
     InvalidInput(&'static str),
 
+    #[error("Invalid path from config: {0}")]
+    InvalidPath(String),
+
     #[error("Network or connection error: {0}")]
     ConnectionIssue(&'static str),
 
