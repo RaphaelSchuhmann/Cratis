@@ -1,5 +1,9 @@
 use std::path::Path;
 use crate::error::{CratisError, CratisResult};
+use std::time::{SystemTime, UNIX_EPOCH};
+use std::fs::File;
+use std::io::{BufReader, Read};
+use blake3::Hasher;
 
 /// Verifies that a given path exists and is a directory in the filesystem.
 ///
@@ -37,12 +41,12 @@ pub fn ensure_path_exists(path: &Path) -> CratisResult<()> {
         let path_str = path.to_string_lossy().into_owned();
         return Err(CratisError::InvalidPath(path_str));
     }
-    
+
     if path.is_file() {
         let path_str = path.to_string_lossy().into_owned();
         return Err(CratisError::InvalidPath(format!("The path has to point to a folder: {}", path_str)));
     }
-    
+
     Ok(())
 }
 
@@ -77,4 +81,86 @@ pub fn to_human_readable_size(bytes: f64) -> String {
     }
 
     format!("{:.2} {}", size, units[unit_index])
+}
+
+/// Returns the current Unix timestamp in seconds since the Unix epoch.
+/// 
+/// # Returns
+/// * `CratisResult<u64>` - The current Unix timestamp in seconds on success, or an error if the
+///   system time cannot be retrieved.
+/// 
+/// # Errors
+/// 
+/// Returns `CratisError::Internal` if the system time cannot be obtained or is before the Unix epoch.
+pub fn timestamp_now() -> CratisResult<u64> {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|_| CratisError::Internal("Failed to get system time."))
+        .map(|duration| duration.as_secs())
+}
+
+/// Sanitizes a filename by removing or replacing invalid characters.
+/// 
+/// This function removes control characters and replaces common invalid characters
+/// with underscores. Invalid characters include: '/', '\', ':', '*', '?', '"', '<', '>', '|'
+/// 
+/// # Arguments
+/// 
+/// * `filename` - A string slice that holds the filename to sanitize
+/// 
+/// # Returns
+/// * `String` - The sanitized filename. Returns "_" if the input filename becomes empty after sanitization.
+/// 
+/// # Examples
+/// 
+/// ```ignore
+/// let safe_name = sanitize_filename("file:*.txt");
+/// assert_eq!(safe_name, "file___.txt");
+/// ```
+pub fn sanitize_filename(filename: &str) -> String {
+    let invalid_chars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
+
+    let mut sanitized = filename.chars().map(|c| if invalid_chars.contains(&c) || c.is_control() {'_'} else { c }).collect::<String>();
+
+    if sanitized.is_empty() {
+        "_".to_string()
+    } else {
+        sanitized
+    }
+}
+
+/// Calculates a hash of the contents of a file at the specified path.
+/// 
+/// Reads the file in chunks and calculates a hash using the configured hasher.
+/// 
+/// # Arguments
+/// 
+/// * `path` - A string slice containing the path to the file to hash
+/// 
+/// # Returns
+/// 
+/// * `CratisResult<String>` - THe hexadecimal string representation of the file's hash on success,
+/// or an error if the file cannot be read.
+/// 
+/// # Errors
+/// 
+/// Returns `CratisError::IOError` if:
+/// * The file cannot be opened
+/// * An error occurs while reading the file
+pub fn hash_file(path: &str) -> CratisResult<String> {
+    let file = File::open(path).map_err(|e| CratisError::IoError(e.into()))?;
+    let mut reader = BufReader::new(file);
+
+    let mut hasher = Hasher::new();
+    let mut buffer = [0u8; 1024];
+
+    loop {
+        let bytes_read = reader.read(&mut buffer).map_err(|e| CratisError::IoError(e.into()))?;
+        if bytes_read == 0 {
+            break;
+        }
+        hasher.update(&buffer[..bytes_read]);
+    }
+
+    Ok(hasher.finalize().to_hex().to_string())
 }
