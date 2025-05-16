@@ -5,12 +5,13 @@ use std::sync::mpmc::RecvTimeoutError;
 use std::sync::mpsc::channel;
 use std::thread;
 use std::time::{Duration, Instant};
+use cratis_core::error::{display_error, CratisError};
 // TODO:
-// - Use Cratis-Core Error for error handling
 // - Load watch directories and exclude directories form config
+// - Exclude any directories mentioned in the "exclude" section in the cratis.yml
 
 fn main() {
-    let watch_path = "/home/raphael/test/";
+    let watch_path = "/insert/watch/path/here";
 
     let handle = thread::spawn(move || {
         let (tx, rx) = channel();
@@ -21,14 +22,14 @@ fn main() {
                     // Send event to channel
                     tx.send(event).unwrap();
                 }
-                Err(e) => eprintln!("watch error: {:?}", e),
+                Err(e) => display_error(CratisError::WatcherError(!format("{:?}", e)), false),
             }
-        }).expect("Failed to create watcher");
+        }).map_err(|e| display_error(CratisError::WatcherError(!format("Failed to create watcher")), false));
 
-        watcher.watch(watch_path, RecursiveMode::Recursive).expect("Failed to watch directory");
+        watcher.watch(watch_path, RecursiveMode::Recursive).map_err(|e| display_error(CratisError::WatchError(!format("Failed to watch directory: {}", watch_path))));
 
-        let debounce_duration = Duration::from_millis(500);
-        let mut last_event_time = Instant::now();
+        let debounce_duration: Duration = Duration::from_millis(500);
+        let mut last_event_time: Instant = Instant::now();
         let mut pending_events = HashSet::new();
 
         loop {
@@ -51,7 +52,7 @@ fn main() {
                     }
                 }
                 Err(e) => {
-                    eprintln!("channel error: {:?}", e);
+                    display_error(CratisError::WatcherError(!format("channel error: {:?}", e)), false);
                     break;
                 }
             }

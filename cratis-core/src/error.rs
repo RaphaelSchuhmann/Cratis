@@ -32,6 +32,9 @@ pub enum CratisError {
 
     #[error("Internal error: {0}")]
     Internal(&'static str),
+    
+    #[error("Watch error: {0}")]
+    WatchError(String),
 
     #[error("Unknown error")]
     Unknown,

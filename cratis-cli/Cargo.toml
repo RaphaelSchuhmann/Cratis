@@ -4,5 +4,5 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-cratis_core = { path = "../cratis-core" }
+cratis-core = { path = "../cratis-core" }
 notify = "8.0.0"
