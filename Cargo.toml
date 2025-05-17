@@ -5,4 +5,4 @@ members = [
     "cratis-api",
     "cratis-cli",
     "cratis-core"
-]
+, "cratis-watcher"]

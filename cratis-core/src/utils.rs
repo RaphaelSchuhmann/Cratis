@@ -4,6 +4,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use std::fs::File;
 use std::io::{BufReader, Read};
 use blake3::Hasher;
+use notify::event::{EventKind};
 
 /// Verifies that a given path exists and is a directory in the filesystem.
 ///
@@ -120,7 +121,7 @@ pub fn timestamp_now() -> CratisResult<u64> {
 pub fn sanitize_filename(filename: &str) -> String {
     let invalid_chars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
 
-    let mut sanitized = filename.chars().map(|c| if invalid_chars.contains(&c) || c.is_control() {'_'} else { c }).collect::<String>();
+    let sanitized = filename.chars().map(|c| if invalid_chars.contains(&c) || c.is_control() {'_'} else { c }).collect::<String>();
 
     if sanitized.is_empty() {
         "_".to_string()
@@ -163,4 +164,21 @@ pub fn hash_file(path: &str) -> CratisResult<String> {
     }
 
     Ok(hasher.finalize().to_hex().to_string())
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum EventAction {
+    Create,
+    Modify,
+    Delete,
+    Other
+}
+
+pub fn map_event_kinds(kind: &EventKind) -> EventAction {
+    match kind {
+        EventKind::Create(_) => EventAction::Create,
+        EventKind::Modify(_) => EventAction::Modify,
+        EventKind::Remove(_) => EventAction::Delete,
+        _ => EventAction::Other
+    }
 }
