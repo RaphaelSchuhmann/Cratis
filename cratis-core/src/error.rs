@@ -4,7 +4,7 @@ pub enum CratisError {
     IoError(#[from] std::io::Error),
 
     #[error("Configuration error: {0}")]
-    ConfigError(&'static str),
+    ConfigError(String),
 
     #[error("Failed to parse configuration: {0}")]
     ConfigParseError(#[from] serde_yaml::Error),
@@ -32,6 +32,12 @@ pub enum CratisError {
 
     #[error("Internal error: {0}")]
     Internal(&'static str),
+    
+    #[error("Watch error: {0}")]
+    WatcherError(String),
+    
+    #[error("Channel error: {0}")]
+    ChannelError(String),
 
     #[error("Unknown error")]
     Unknown,
@@ -64,4 +70,6 @@ pub fn display_error(error: &CratisError, debug: bool) {
     } else {
         eprintln!("{error}");
     }
+    
+    std::process::exit(1);
 }
