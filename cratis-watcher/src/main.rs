@@ -47,12 +47,17 @@ fn main() {
     let (tx, rx) = channel();
 
     let watch_dirs: &Vec<String> = &config.backup.watch_directories;
-    let exclude_dirs: &Vec<String> = &config.backup.exclude.clone().unwrap();
+    let exclude_dirs: &Vec<String> = &config.backup.exclude.clone().unwrap_or_default();
 
     let mut exclude_patterns: Vec<Pattern> = Vec::new();
     
     if !exclude_dirs.is_empty() {
-        exclude_patterns.extend(exclude_dirs.iter().map(|pattern| Pattern::new(pattern).unwrap()));
+        for pattern in exclude_dirs.iter() {
+            match Pattern::new(pattern) {
+                Ok(p) => exclude_patterns.push(p),
+                Err(e) => display_error(&CratisError::ConfigError(format!("Invalid exclusion pattern '{}': {}", pattern, e)), false)
+            }
+        }
     }
     
     let _watcher = start_watching(&watch_dirs, tx).unwrap();

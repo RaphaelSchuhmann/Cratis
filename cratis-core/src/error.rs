@@ -4,7 +4,7 @@ pub enum CratisError {
     IoError(#[from] std::io::Error),
 
     #[error("Configuration error: {0}")]
-    ConfigError(&'static str),
+    ConfigError(String),
 
     #[error("Failed to parse configuration: {0}")]
     ConfigParseError(#[from] serde_yaml::Error),
