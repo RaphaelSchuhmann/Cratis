@@ -12,6 +12,33 @@ use cratis_core::config::{get_config, load_config, CratisConfig}; // Remove load
 use cratis_core::utils::{EventAction, map_event_kinds};
 use glob::Pattern;
 
+/// Entry point for the Cratis file watcher application.
+///
+/// This function initializes and runs the file watching system with the following steps:
+/// 1. Loads configuration from a specified YAML file
+/// 2. Sets up file system watching for configured directories
+/// 3. Implements event debouncing with a 500ms window
+/// 4. Processes file system events while filtering out temporary files and excluded paths
+///
+/// # Configuration
+///
+/// The application expects a configuration file that specifies:
+/// * Watch directories to monitor
+/// * Directories to exclude from monitoring
+///
+/// # Error Handling
+///
+/// The function handles various error cases including:
+/// * Configuration loading failures
+/// * File system watcher setup errors
+/// * Event receiving timeouts
+///
+/// # Implementation Details
+///
+/// Uses a channel-based approach for event handling with:
+/// * Debouncing mechanism to prevent event flooding
+/// * Event filtering for temporary files
+/// * Pattern-based exclusion system
 fn main() {
     let _ = load_config("/home/raphael/Development/Cratis/cratis.yml");
 
@@ -76,6 +103,42 @@ fn main() {
     }
 }
 
+/// Initializes and starts a file system watcher for the specified paths.
+///
+/// Sets up a `RecommendedWatcher` instance that monitors the given paths for file system events
+/// and forwards them through a channel.
+///
+/// # Arguments
+///
+/// * `paths` - A vector of strings representing the file system paths to watch
+/// * `tx` - A channel sender for forwarding file system events
+///
+/// # Returns
+///
+/// Returns a `Result` containing the initialized `RecommendedWatcher` if successful.
+///
+/// # Errors
+///
+/// This function can fail if:
+/// * The watcher cannot be initialized
+/// * Any of the specified paths cannot be watched
+///
+/// # Example
+///
+/// ```rust
+/// use std::sync::mpsc::channel;
+///
+/// let (tx, rx) = channel();
+/// let paths = vec![String::from("/path/to/watch")];
+/// let watcher = start_watching(&paths, tx)?;
+/// ```
+///
+/// # Implementation Details
+///
+/// * Uses recursive watching mode for all directories
+/// * Automatically handles error cases by displaying them through `CratisError`
+/// * Events are sent through the channel asynchronously
+/// * Failed watch attempts for individual paths are logged but don't stop the overall watching process
 fn start_watching(paths: &Vec<String>, tx: Sender<Event>) -> Result<RecommendedWatcher> {
     let mut watcher = RecommendedWatcher::new(
         move |res: Result<Event>| {
@@ -94,6 +157,39 @@ fn start_watching(paths: &Vec<String>, tx: Sender<Event>) -> Result<RecommendedW
     Ok(watcher)
 }
 
+/// Determines if a given path represents a temporary file.
+///
+/// Checks the file name against common temporary file patterns used by various
+/// text editors and systems.
+///
+/// # Arguments
+///
+/// * `path` - A reference to a `Path` to check
+///
+/// # Returns
+///
+/// Returns `true` if the file matches any of these patterns:
+/// * Files starting with '.'
+/// * Files ending with '.tmp', '.temp', '.swp', or '.bak'
+/// * Files starting with '~' or '.#'
+/// * Vim temporary files (specifically '4913')
+///
+/// Returns `false` if:
+/// * The path has no filename
+/// * The filename cannot be converted to a string
+/// * The filename doesn't match any temporary file patterns
+///
+/// # Example
+///
+/// ```ignore
+/// use std::path::Path;
+///
+/// let temp_file = Path::new(".temporary.swp");
+/// assert!(is_temp_file(&temp_file));
+///
+/// let normal_file = Path::new("document.txt");
+/// assert!(!is_temp_file(&normal_file));
+/// ```
 fn is_temp_file(path: &Path) -> bool {
     if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
         name.starts_with('.')
@@ -109,6 +205,35 @@ fn is_temp_file(path: &Path) -> bool {
     }
 }
 
+/// Checks if a path matches any of the provided exclusion patterns.
+///
+/// # Arguments
+///
+/// * `path` - A reference to a `Path` to check
+/// * `exclude_patterns` - A slice of `Pattern`s to match against
+///
+/// # Returns
+///
+/// Returns `true` if the path matches any of the exclusion patterns,
+/// `false` otherwise.
+///
+/// # Example
+///
+/// ```rust
+/// use std::path::Path;
+///
+/// let patterns = vec![Pattern::new("*.log"), Pattern::new("target/*")];
+/// let path = Path::new("app.log");
+/// assert!(is_excluded(&path, &patterns));
+///
+/// let source_file = Path::new("src/main.rs");
+/// assert!(!is_excluded(&source_file, &patterns));
+/// ```
+///
+/// # Implementation Details
+///
+/// Uses the `Iterator::any()` method to check if any pattern matches the given path,
+/// providing short-circuit evaluation for efficiency.
 fn is_excluded(path: &Path, exclude_patterns: &[Pattern]) -> bool {
     exclude_patterns.iter().any(|pattern| pattern.matches_path(path))
 }

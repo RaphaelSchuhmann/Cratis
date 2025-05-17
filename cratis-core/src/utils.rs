@@ -174,6 +174,31 @@ pub enum EventAction {
     Other
 }
 
+/// Maps a file system event kind to a simplified `EventAction` enum.
+///
+/// This function converts complex file system event kinds into a simplified
+/// representation using the `EventAction` enum, making it easier to handle
+/// common file system operations.
+///
+/// # Arguments
+///
+/// * `kind` - A reference to an `EventKind` that represents the type of file system event
+///
+/// # Returns
+///
+/// Returns an `EventAction` enum variant corresponding to the input event kind:
+/// * `EventAction::Create` for creation events
+/// * `EventAction::Modify` for modification events
+/// * `EventAction::Delete` for removal events
+/// * `EventAction::Other` for any other event types
+///
+/// # Example
+///
+/// ```ignore
+/// let event_kind = EventKind::Create(CreateKind::Any);
+/// let action = map_event_kinds(&event_kind);
+/// assert_eq!(action, EventAction::Create);
+/// ```
 pub fn map_event_kinds(kind: &EventKind) -> EventAction {
     match kind {
         EventKind::Create(_) => EventAction::Create,

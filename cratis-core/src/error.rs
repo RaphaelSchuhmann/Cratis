@@ -70,4 +70,6 @@ pub fn display_error(error: &CratisError, debug: bool) {
     } else {
         eprintln!("{error}");
     }
+    
+    std::process::exit(1);
 }
