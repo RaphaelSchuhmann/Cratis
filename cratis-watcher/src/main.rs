@@ -1,4 +1,5 @@
-#[allow(unused_must_use)]
+#![allow(unused_must_use)]
+#![allow(unused_imports)]
 
 use notify::{RecommendedWatcher, Event, RecursiveMode, Result, Watcher};
 use std::collections::HashSet;
@@ -60,7 +61,7 @@ fn main() {
         }
     }
     
-    let _watcher = start_watching(&watch_dirs, tx).unwrap();
+    let _watcher = start_watching(watch_dirs, tx).unwrap();
 
     let debounce_duration: Duration = Duration::from_millis(500);
     let mut last_event_time: Instant = Instant::now();
@@ -71,18 +72,22 @@ fn main() {
             Ok(event) => {
                 for path in event.paths {
                     if is_temp_file(&path) || is_excluded(&path, &exclude_patterns) { continue; }
-                    
+
                     let event_action = map_event_kinds(&event.kind);
                     
                     match event_action {
                         EventAction::Delete => {
-                            pending_events.insert((path, event_action));
+                            pending_events.insert((path.clone(), event_action));
                         },
                         _ => {
-                            if let Ok(metadata) = fs::metadata(&path) {
-                                if metadata.is_file() {
-                                    pending_events.insert((path, event_action));
+                            if path.exists() {
+                                if let Ok(metadata) = fs::metadata(&path) {
+                                    if metadata.is_file() {
+                                        pending_events.insert((path, event_action));
+                                    }
                                 }
+                            } else {
+                                pending_events.insert((path.clone(), EventAction::Delete));
                             }
                         }
                     }
