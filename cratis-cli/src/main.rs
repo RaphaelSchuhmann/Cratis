@@ -1,3 +1,20 @@
+use clap::{Parser};
+use crate::cli::Commands;
+
+mod cli;
+
 fn main() {
-    println!("Hello, world!");
+    let cli_ = cli::Cli::parse();
+
+    match cli_.command {
+        Commands::BackupNow {} => {
+            println!("Backup now");
+        }
+        Commands::RestoreSnapshot { from, to } => {
+            println!("Restore snapshot from {} to {}", from, to);
+        }
+        Commands::ListVersions { file} => {
+            println!("List versions of {}", file);
+        }
+    }
 }
