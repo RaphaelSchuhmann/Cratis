@@ -16,5 +16,11 @@ fn main() {
         Commands::ListVersions { file} => {
             println!("List versions of {}", file);
         }
+        Commands::PingServer {} => {
+            println!("Ping server");
+        }
+        Commands::ShowConfig {} => {
+            println!("Getting Config");
+        }
     }
 }
