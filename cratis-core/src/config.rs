@@ -2,6 +2,12 @@
 use serde::Deserialize;
 use once_cell::sync::OnceCell;
 use std::fs;
+use notify::Config;
+use crate::error;
+use crate::error::{display_error, CratisError};
+
+// TODO: Remove this later on when a proper .yml selection is implemented
+pub static TEMP_CONFIG_PATH: &str = "/home/raphael/Development/Cratis/cratis.yml";
 
 #[derive(Debug, Deserialize)]
 pub struct CratisConfig {
@@ -62,23 +68,34 @@ static CONFIG: OnceCell<CratisConfig> = OnceCell::new();
 pub fn load_config(path: &str) {
     let contents = fs::read_to_string(path).expect("Failed to read config file");
     let parsed: CratisConfig = serde_yaml::from_str(&contents).expect("Invalid config format");
-    CONFIG.set(parsed).expect("Config already initialized");
+    CONFIG.set(parsed).expect("Config initialized");
 }
 
-/// Returns a reference to the globally loaded application configuration.
+/// Returns a reference to the global application configuration.
 ///
-/// Panics if the configuration has not been initialized with `load_config`.
+/// If the configuration hasn't been loaded yet, attempts to load it from
+/// the default path. Displays an error and panics if loading fails.
 ///
-/// # Examples
+/// # Returns
 ///
-/// ```ignore
-/// // Initialize configuration once at startup
-/// load_config("config.yaml");
+/// A static reference to the `CratisConfig` instance.
 ///
-/// // Access configuration anywhere after initialization
-/// let config = get_config();
-/// assert_eq!(config.client.name, "example-client");
-/// ```
+/// # Panics
+///
+/// Panics if the configuration cannot be loaded.
 pub fn get_config() -> &'static CratisConfig {
-    CONFIG.get().expect("Config not initialized")
+    let config = CONFIG.get();
+    
+    if config.is_none() {
+        load_config(TEMP_CONFIG_PATH);
+        
+        if config.is_none() {
+            display_error(&CratisError::ConfigError("Unable to load config".to_string()), false);
+            unreachable!()   
+        } else {
+            CONFIG.get().unwrap()
+        }
+    } else {
+        config.unwrap()
+    }
 }

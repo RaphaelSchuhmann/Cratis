@@ -7,3 +7,5 @@ edition = "2024"
 clap = "4.5.40"
 clap_derive = { version = "4.0.0-rc.1" }
 cratis-core = { path = "../cratis-core" }
+reqwest = { version = "0.12", features = ["json"] }
+tokio = { version = "1", features = ["full"] }

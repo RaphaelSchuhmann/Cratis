@@ -3,7 +3,8 @@ use crate::cli::Commands;
 
 mod cli;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let cli_ = cli::Cli::parse();
 
     match cli_.command {

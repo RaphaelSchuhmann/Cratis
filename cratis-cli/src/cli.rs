@@ -1,4 +1,7 @@
 use clap_derive::{Parser, Subcommand};
+use reqwest::Error;
+use std::fs::File;
+use cratis_core::error::CratisResult;
 
 #[derive(Parser)]
 #[command(name = "cratis")]
@@ -28,4 +31,11 @@ pub enum Commands {
     ShowConfig,
     // Send a test request to verify server connectivity and token validity
     PingServer,
+}
+
+pub async fn backup_now() -> CratisResult<String> {
+    let config = cratis_core::config::get_config();
+    
+
+    Ok(String::new())
 }

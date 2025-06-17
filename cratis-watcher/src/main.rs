@@ -9,7 +9,7 @@ use std::sync::mpsc::RecvTimeoutError;
 use std::sync::mpsc::{channel, Sender};
 use std::time::{Duration, Instant};
 use cratis_core::error::{display_error, CratisError};
-use cratis_core::config::{get_config, load_config, CratisConfig}; // Remove load_config() once config loading is properly implemented
+use cratis_core::config::{get_config, load_config, CratisConfig, TEMP_CONFIG_PATH}; // Remove load_config() once config loading is properly implemented
 use cratis_core::utils::{EventAction, map_event_kinds};
 use glob::Pattern;
 
@@ -41,10 +41,10 @@ use glob::Pattern;
 /// * Event filtering for temporary files
 /// * Pattern-based exclusion system
 fn main() {
-    let _ = load_config("/home/raphael/Development/Cratis/cratis.yml");
+    let _ = load_config(TEMP_CONFIG_PATH);
 
-    let config: &CratisConfig = get_config();
-
+    let mut config = get_config();
+    
     let (tx, rx) = channel();
 
     let watch_dirs: &Vec<String> = &config.backup.watch_directories;
