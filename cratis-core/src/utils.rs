@@ -5,7 +5,7 @@ use std::io::{BufReader, Read};
 use notify::event::{EventKind};
 use std::time::{SystemTime, UNIX_EPOCH};
 use blake3::Hasher;
-use crate::error::{display_error, CratisError, CratisResult};
+use crate::error::{display_msg, CratisError, CratisResult, CratisErrorLevel};
 use crate::config::{CratisConfig};
 use glob::Pattern;
 
@@ -323,7 +323,6 @@ pub fn get_files_in_directory(dir: &String) -> CratisResult<Vec<PathBuf>> {
     
     let config: &CratisConfig = crate::config::get_config();
     
-    let watch_dirs: &Vec<String> = &config.backup.watch_directories;
     let exclude_dirs: &Vec<String> = &config.backup.exclude.clone().unwrap_or_default();
 
     let mut exclude_patterns: Vec<Pattern> = Vec::new();
@@ -332,7 +331,7 @@ pub fn get_files_in_directory(dir: &String) -> CratisResult<Vec<PathBuf>> {
         for pattern in exclude_dirs.iter() {
             match Pattern::new(pattern) {
                 Ok(p) => exclude_patterns.push(p),
-                Err(e) => display_error(&CratisError::ConfigError(format!("Invalid exclusion pattern '{}': {}", pattern, e)), false)
+                Err(e) => display_msg(Some(&CratisError::ConfigError(format!("Invalid exclusion pattern '{}': {}", pattern, e))), CratisErrorLevel::Fatal, None)
             }
         }
     }
@@ -386,7 +385,7 @@ pub fn get_files_in_directory(dir: &String) -> CratisResult<Vec<PathBuf>> {
 ///     Err(e) => println!("Error: {}", e),
 /// }
 /// ```
-pub fn load_file(file_path: PathBuf) -> CratisResult<File> {
+pub fn load_file(file_path: PathBuf) -> CratisResult<(File, String)> {
     let file = File::open(&file_path).map_err(|e| {
         if e.kind() == std::io::ErrorKind::NotFound {
             // Warning
@@ -394,7 +393,33 @@ pub fn load_file(file_path: PathBuf) -> CratisResult<File> {
         } else {
             CratisError::IoError(e.into())
         }
-    });
+    })?;
     
-    file
+    Ok((file, get_file_name(file_path)))
+}
+
+/// Extracts the filename from a path.
+///
+/// This function attempts to extract the filename component from a path.
+/// If the filename cannot be extracted or converted to a string, it returns "unknown_file".
+///
+/// # Arguments
+///
+/// * `file_path` - A PathBuf containing the path from which to extract the filename
+///
+/// # Returns
+///
+/// * `String` - The extracted filename as a String, or "unknown_file" if extraction fails
+///
+/// # Examples
+///
+/// ```ignore
+/// use std::path::PathBuf;
+///
+/// let path = PathBuf::from("/path/to/document.txt");
+/// let filename = get_file_name(path);
+/// assert_eq!(filename, "document.txt");
+/// ```
+pub fn get_file_name(file_path: PathBuf) -> String {
+    file_path.file_name().and_then(|os_str| os_str.to_str()).unwrap_or("unknown_file").to_string()
 }

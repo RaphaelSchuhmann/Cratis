@@ -12,7 +12,7 @@ pub enum CratisError {
     #[error("Invalid input provided: {0}")]
     InvalidInput(&'static str),
 
-    #[error("Invalid path from config: {0}")]
+    #[error("Invalid path: {0}")]
     InvalidPath(String),
 
     #[error("Network or connection error: {0}")]
@@ -32,15 +32,28 @@ pub enum CratisError {
 
     #[error("Internal error: {0}")]
     Internal(&'static str),
-    
+
     #[error("Watch error: {0}")]
     WatcherError(String),
-    
+
     #[error("Channel error: {0}")]
     ChannelError(String),
 
+    #[error("Request error: {0}")]
+    RequestError(&'static str),
+    
     #[error("Unknown error")]
     Unknown,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CratisErrorLevel {
+    // An info message for the user.
+    Info,
+    // An error occurred, but it is not fatal.
+    Warning,
+    // A fatal error occurred, exit program immediately!
+    Fatal,
 }
 
 pub type CratisResult<T> = Result<T, CratisError>;
@@ -61,16 +74,20 @@ pub type CratisResult<T> = Result<T, CratisError>;
 /// use cratis_core::CratisError;
 ///
 /// let error = CratisError::InvalidInput("Invalid configuration");
-/// display_error(&error, false); // Displays: "Invalid input provided: Invalid configuration"
-/// display_error(&error, true);  // Displays detailed debug structure with formatting
+/// display_msg(&error, false); // Displays: "Invalid input provided: Invalid configuration"
+/// display_msg(&error, true);  // Displays detailed debug structure with formatting
 /// ```
-/// // TODO: Add a error level for info, warning, and fatal error
-pub fn display_error(error: &CratisError, debug: bool) {
-    if debug {
-        eprintln!("Error (debug): {:#?}", error);
-    } else {
-        eprintln!("{error}");
-    }
+///
+pub fn display_msg(error: Option<&CratisError>, level: CratisErrorLevel, msg: Option<String> /* msg is for info messages only */) {
+    let error = error.unwrap_or(&CratisError::Unknown);
+    let msg = msg.unwrap_or("".to_string());
     
-    std::process::exit(1);
+    if level == CratisErrorLevel::Info {
+        eprintln!("Info: \n{msg}");
+    } else if level == CratisErrorLevel::Warning {
+        eprintln!("Warning: \n{error}");
+    } else if level == CratisErrorLevel::Fatal {
+        eprintln!("Fatal error: \n{error}");
+        std::process::exit(1);
+    }
 }

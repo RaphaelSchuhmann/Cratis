@@ -8,7 +8,7 @@ use std::path::Path;
 use std::sync::mpsc::RecvTimeoutError;
 use std::sync::mpsc::{channel, Sender};
 use std::time::{Duration, Instant};
-use cratis_core::error::{display_error, CratisError};
+use cratis_core::error::{display_msg, CratisError, CratisErrorLevel};
 use cratis_core::config::{get_config, load_config, CratisConfig, TEMP_CONFIG_PATH}; // Remove load_config() once config loading is properly implemented
 use cratis_core::utils::{EventAction, map_event_kinds, is_excluded, get_files_in_directory};
 use glob::Pattern;
@@ -56,7 +56,7 @@ fn main() {
         for pattern in exclude_dirs.iter() {
             match Pattern::new(pattern) {
                 Ok(p) => exclude_patterns.push(p),
-                Err(e) => display_error(&CratisError::ConfigError(format!("Invalid exclusion pattern '{}': {}", pattern, e)), false)
+                Err(e) => display_msg(Some(&CratisError::ConfigError(format!("Invalid exclusion pattern '{}': {}", pattern, e))), CratisErrorLevel::Fatal, None)
             }
         }
     }
@@ -106,7 +106,7 @@ fn main() {
                 }
             }
             Err(e) => {
-                display_error(&CratisError::ChannelError(format!("{}", e)), false);
+                display_msg(Some(&CratisError::ChannelError(format!("{}", e))), CratisErrorLevel::Fatal, None);
                 break;
             }
         }
@@ -154,14 +154,14 @@ fn start_watching(paths: &Vec<String>, tx: Sender<Event>) -> Result<RecommendedW
         move |res: Result<Event>| {
             match res {
                 Ok(event) => tx.send(event).unwrap(),
-                Err(e) => display_error(&CratisError::WatcherError(format!("{:?}", e)), false),
+                Err(e) => display_msg(Some(&CratisError::WatcherError(format!("{:?}", e))), CratisErrorLevel::Fatal, None),
             }
         },
         notify::Config::default(),
     )?;
 
     for path in paths {
-        let _ = watcher.watch(Path::new(path), RecursiveMode::Recursive).map_err(|_| display_error(&CratisError::WatcherError(format!("Failed to watch directory: {}", path)), false));
+        let _ = watcher.watch(Path::new(path), RecursiveMode::Recursive).map_err(|_| display_msg(Some(&CratisError::WatcherError(format!("Failed to watch directory: {}", path))), CratisErrorLevel::Warning, None));
     }
 
     Ok(watcher)

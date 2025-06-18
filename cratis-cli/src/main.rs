@@ -1,5 +1,6 @@
 use clap::{Parser};
-use crate::cli::Commands;
+use cratis_core::error::{display_msg, CratisError, CratisErrorLevel, CratisResult};
+use crate::cli::{Commands, backup_now};
 
 mod cli;
 
@@ -9,7 +10,13 @@ async fn main() {
 
     match cli_.command {
         Commands::BackupNow {} => {
-            println!("Backup now");
+            display_msg(None, CratisErrorLevel::Info, Some("Starting backup".to_string()));
+            
+            let result: CratisResult<String> = backup_now().await;
+            match result {
+                Ok(_) => display_msg(None, CratisErrorLevel::Info, Some(result.unwrap())),
+                Err(e) => display_msg(Some(&e), CratisErrorLevel::Warning, None),
+            }
         }
         Commands::RestoreSnapshot { from, to } => {
             println!("Restore snapshot from {} to {}", from, to);

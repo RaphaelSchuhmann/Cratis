@@ -2,9 +2,7 @@
 use serde::Deserialize;
 use once_cell::sync::OnceCell;
 use std::fs;
-use notify::Config;
-use crate::error;
-use crate::error::{display_error, CratisError};
+use crate::error::{display_msg, CratisError, CratisErrorLevel};
 
 // TODO: Remove this later on when a proper .yml selection is implemented
 pub static TEMP_CONFIG_PATH: &str = "/home/raphael/Development/Cratis/cratis.yml";
@@ -90,7 +88,7 @@ pub fn get_config() -> &'static CratisConfig {
         load_config(TEMP_CONFIG_PATH);
         
         if config.is_none() {
-            display_error(&CratisError::ConfigError("Unable to load config".to_string()), false);
+            display_msg(Some(&CratisError::ConfigError("Unable to load config".to_string())), CratisErrorLevel::Fatal, None);
             unreachable!()   
         } else {
             CONFIG.get().unwrap()
