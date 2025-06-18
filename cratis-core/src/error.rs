@@ -64,6 +64,7 @@ pub type CratisResult<T> = Result<T, CratisError>;
 /// display_error(&error, false); // Displays: "Invalid input provided: Invalid configuration"
 /// display_error(&error, true);  // Displays detailed debug structure with formatting
 /// ```
+/// // TODO: Add a error level for info, warning, and fatal error
 pub fn display_error(error: &CratisError, debug: bool) {
     if debug {
         eprintln!("Error (debug): {:#?}", error);

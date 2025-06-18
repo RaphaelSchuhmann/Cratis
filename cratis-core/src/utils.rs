@@ -1,10 +1,13 @@
-use std::path::Path;
-use crate::error::{CratisError, CratisResult};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::path::{Path, PathBuf};
+use std::fs;
 use std::fs::File;
 use std::io::{BufReader, Read};
-use blake3::Hasher;
 use notify::event::{EventKind};
+use std::time::{SystemTime, UNIX_EPOCH};
+use blake3::Hasher;
+use crate::error::{display_error, CratisError, CratisResult};
+use crate::config::{CratisConfig};
+use glob::Pattern;
 
 /// Verifies that a given path exists and is a directory in the filesystem.
 ///
@@ -85,13 +88,13 @@ pub fn to_human_readable_size(bytes: f64) -> String {
 }
 
 /// Returns the current Unix timestamp in seconds since the Unix epoch.
-/// 
+///
 /// # Returns
 /// * `CratisResult<u64>` - The current Unix timestamp in seconds on success, or an error if the
 ///   system time cannot be retrieved.
-/// 
+///
 /// # Errors
-/// 
+///
 /// Returns `CratisError::Internal` if the system time cannot be obtained or is before the Unix epoch.
 pub fn timestamp_now() -> CratisResult<u64> {
     SystemTime::now()
@@ -101,19 +104,19 @@ pub fn timestamp_now() -> CratisResult<u64> {
 }
 
 /// Sanitizes a filename by removing or replacing invalid characters.
-/// 
+///
 /// This function removes control characters and replaces common invalid characters
 /// with underscores. Invalid characters include: '/', '\', ':', '*', '?', '"', '<', '>', '|'
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `filename` - A string slice that holds the filename to sanitize
-/// 
+///
 /// # Returns
 /// * `String` - The sanitized filename. Returns "_" if the input filename becomes empty after sanitization.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```ignore
 /// let safe_name = sanitize_filename("file:*.txt");
 /// assert_eq!(safe_name, "file___.txt");
@@ -131,20 +134,20 @@ pub fn sanitize_filename(filename: &str) -> String {
 }
 
 /// Calculates a hash of the contents of a file at the specified path.
-/// 
+///
 /// Reads the file in chunks and calculates a hash using the configured hasher.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `path` - A string slice containing the path to the file to hash
-/// 
+///
 /// # Returns
-/// 
+///
 /// * `CratisResult<String>` - THe hexadecimal string representation of the file's hash on success,
 /// or an error if the file cannot be read.
-/// 
+///
 /// # Errors
-/// 
+///
 /// Returns `CratisError::IOError` if:
 /// * The file cannot be opened
 /// * An error occurs while reading the file
@@ -206,4 +209,192 @@ pub fn map_event_kinds(kind: &EventKind) -> EventAction {
         EventKind::Remove(_) => EventAction::Delete,
         _ => EventAction::Other
     }
+}
+
+/// Checks if a path matches any of the provided exclusion patterns.
+///
+/// # Arguments
+///
+/// * `path` - A reference to a `Path` to check
+/// * `exclude_patterns` - A slice of `Pattern`s to match against
+///
+/// # Returns
+///
+/// Returns `true` if the path matches any of the exclusion patterns,
+/// `false` otherwise.
+///
+/// # Example
+///
+/// ```ignore
+/// use std::path::Path;
+///
+/// let patterns = vec![Pattern::new("*.log"), Pattern::new("target/*")];
+/// let path = Path::new("app.log");
+/// assert!(is_excluded(&path, &patterns));
+///
+/// let source_file = Path::new("src/main.rs");
+/// assert!(!is_excluded(&source_file, &patterns));
+/// ```
+///
+/// # Implementation Details
+///
+/// Uses the `Iterator::any()` method to check if any pattern matches the given path,
+/// providing short-circuit evaluation for efficiency.
+pub fn is_excluded(path: &Path, exclude_patterns: &[Pattern]) -> bool {
+    exclude_patterns.iter().any(|pattern| pattern.matches_path(path))
+}
+
+/// Checks if a path points to a file.
+///
+/// # Arguments
+///
+/// * `dir` - A string slice containing the path to check
+///
+/// # Returns
+///
+/// * `bool` - `true` if the path exists and is a file, `false` otherwise
+///
+/// # Examples
+///
+/// ```ignore
+/// if is_path_file("/path/to/file.txt") {
+///     println!("This is a file");
+/// } else {
+///     println!("This is not a file or doesn't exist");
+/// }
+/// ```
+pub fn is_path_file(dir: &str) -> bool {
+    let path = Path::new(dir);
+    
+    match fs::metadata(path) {
+        Ok(metadata) => metadata.is_file(),
+        Err(_) => false
+    }
+}
+
+/// Recursively collects all files in a directory, respecting exclusion patterns.
+///
+/// This function traverses the specified directory and all its subdirectories,
+/// collecting paths to all files while applying exclusion patterns from the
+/// application configuration.
+///
+/// # Arguments
+///
+/// * `dir` - A reference to a String containing the directory path to scan
+///
+/// # Returns
+///
+/// * `CratisResult<Vec<PathBuf>>` - A vector of PathBuf objects representing all files
+///   found in the directory tree, or an error if the directory cannot be accessed
+///
+/// # Errors
+///
+/// Returns `CratisError::InvalidPath` if:
+/// * The path points to a file instead of a directory
+/// * The path does not exist
+///
+/// May also return filesystem-related errors during directory traversal.
+///
+/// # Examples
+///
+/// ```ignore
+/// match get_files_in_directory(&String::from("/path/to/directory")) {
+///     Ok(files) => {
+///         println!("Found {} files", files.len());
+///         for file in files {
+///             println!("{}", file.display());
+///         }
+///     },
+///     Err(e) => println!("Error: {}", e),
+/// }
+/// ```
+pub fn get_files_in_directory(dir: &String) -> CratisResult<Vec<PathBuf>> {
+    // Check if directory is a file (Just in case)
+    if is_path_file(&dir) {
+        // Warning
+        return Err(CratisError::InvalidPath(format!("The path has to point to a folder: {}", dir)));
+    }
+    
+    // Check if directory exists
+    if !Path::new(&dir).exists() {
+        // Warning
+        return Err(CratisError::InvalidPath(format!("The path does not exist: {}", dir)));
+    }
+    
+    let config: &CratisConfig = crate::config::get_config();
+    
+    let watch_dirs: &Vec<String> = &config.backup.watch_directories;
+    let exclude_dirs: &Vec<String> = &config.backup.exclude.clone().unwrap_or_default();
+
+    let mut exclude_patterns: Vec<Pattern> = Vec::new();
+    
+    if !exclude_dirs.is_empty() {
+        for pattern in exclude_dirs.iter() {
+            match Pattern::new(pattern) {
+                Ok(p) => exclude_patterns.push(p),
+                Err(e) => display_error(&CratisError::ConfigError(format!("Invalid exclusion pattern '{}': {}", pattern, e)), false)
+            }
+        }
+    }
+    
+    let path = Path::new(&dir);
+    let mut file_paths: Vec<PathBuf> = Vec::new();
+    
+    for entry in fs::read_dir(path)? {
+        let entry = entry?;
+        let path = entry.path();
+
+        if is_excluded(&path, &exclude_patterns) { continue; }
+        
+        if path.is_dir() {
+            let sub_dir_files = get_files_in_directory(&path.to_str().unwrap().to_string())?;
+            file_paths.extend(sub_dir_files);
+        } else {
+            file_paths.push(path);
+        }
+    }
+    
+    Ok(file_paths)
+}
+
+/// Opens a file at the specified path with enhanced error handling.
+///
+/// Attempts to open the file and provides specific error handling for common issues.
+/// Converts "file not found" errors to a more descriptive `InvalidPath` error.
+///
+/// # Arguments
+///
+/// * `file_path` - A PathBuf containing the path to the file to open
+///
+/// # Returns
+///
+/// * `CratisResult<File>` - A file handle on success
+///
+/// # Errors
+///
+/// * `CratisError::InvalidPath` - If the file does not exist
+/// * `CratisError::IoError` - For other I/O errors (permissions, etc.)
+///
+/// # Examples
+///
+/// ```ignore
+/// use std::path::PathBuf;
+///
+/// let path = PathBuf::from("/path/to/file.txt");
+/// match load_file(path) {
+///     Ok(file) => println!("File opened successfully"),
+///     Err(e) => println!("Error: {}", e),
+/// }
+/// ```
+pub fn load_file(file_path: PathBuf) -> CratisResult<File> {
+    let file = File::open(&file_path).map_err(|e| {
+        if e.kind() == std::io::ErrorKind::NotFound {
+            // Warning
+            CratisError::InvalidPath(format!("File not found: {}", &file_path.to_str().unwrap().to_string()))
+        } else {
+            CratisError::IoError(e.into())
+        }
+    });
+    
+    file
 }

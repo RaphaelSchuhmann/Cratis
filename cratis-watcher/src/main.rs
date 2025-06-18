@@ -10,7 +10,7 @@ use std::sync::mpsc::{channel, Sender};
 use std::time::{Duration, Instant};
 use cratis_core::error::{display_error, CratisError};
 use cratis_core::config::{get_config, load_config, CratisConfig, TEMP_CONFIG_PATH}; // Remove load_config() once config loading is properly implemented
-use cratis_core::utils::{EventAction, map_event_kinds};
+use cratis_core::utils::{EventAction, map_event_kinds, is_excluded, get_files_in_directory};
 use glob::Pattern;
 
 /// Entry point for the Cratis file watcher application.
@@ -43,13 +43,13 @@ use glob::Pattern;
 fn main() {
     let _ = load_config(TEMP_CONFIG_PATH);
 
-    let mut config = get_config();
+    let config = get_config();
     
     let (tx, rx) = channel();
 
     let watch_dirs: &Vec<String> = &config.backup.watch_directories;
     let exclude_dirs: &Vec<String> = &config.backup.exclude.clone().unwrap_or_default();
-
+    
     let mut exclude_patterns: Vec<Pattern> = Vec::new();
     
     if !exclude_dirs.is_empty() {
@@ -213,37 +213,4 @@ fn is_temp_file(path: &Path) -> bool {
     } else {
         false
     }
-}
-
-/// Checks if a path matches any of the provided exclusion patterns.
-///
-/// # Arguments
-///
-/// * `path` - A reference to a `Path` to check
-/// * `exclude_patterns` - A slice of `Pattern`s to match against
-///
-/// # Returns
-///
-/// Returns `true` if the path matches any of the exclusion patterns,
-/// `false` otherwise.
-///
-/// # Example
-///
-/// ```rust
-/// use std::path::Path;
-///
-/// let patterns = vec![Pattern::new("*.log"), Pattern::new("target/*")];
-/// let path = Path::new("app.log");
-/// assert!(is_excluded(&path, &patterns));
-///
-/// let source_file = Path::new("src/main.rs");
-/// assert!(!is_excluded(&source_file, &patterns));
-/// ```
-///
-/// # Implementation Details
-///
-/// Uses the `Iterator::any()` method to check if any pattern matches the given path,
-/// providing short-circuit evaluation for efficiency.
-fn is_excluded(path: &Path, exclude_patterns: &[Pattern]) -> bool {
-    exclude_patterns.iter().any(|pattern| pattern.matches_path(path))
 }
