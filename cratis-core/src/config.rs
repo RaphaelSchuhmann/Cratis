@@ -1,8 +1,9 @@
 #![allow(dead_code)]
 use serde::Deserialize;
 use once_cell::sync::OnceCell;
+use serde_yaml::{Value};
 use std::fs;
-use crate::error::{display_msg, CratisError, CratisErrorLevel};
+use crate::error::{display_msg, CratisError, CratisErrorLevel, CratisResult};
 
 // TODO: Remove this later on when a proper .yml selection is implemented
 pub static TEMP_CONFIG_PATH: &str = "/home/raphael/Development/Cratis/cratis.yml";
@@ -83,17 +84,55 @@ pub fn load_config(path: &str) {
 /// Panics if the configuration cannot be loaded.
 pub fn get_config() -> &'static CratisConfig {
     let config = CONFIG.get();
-    
+
     if config.is_none() {
         load_config(TEMP_CONFIG_PATH);
-        
+
         if config.is_none() {
             display_msg(Some(&CratisError::ConfigError("Unable to load config".to_string())), CratisErrorLevel::Fatal, None);
-            unreachable!()   
+            unreachable!()
         } else {
             CONFIG.get().unwrap()
         }
     } else {
         config.unwrap()
     }
+}
+
+pub fn update_config(key_path: &str, new_value: Value) -> CratisResult<()> {
+    // Read existing YAML file
+    let file_content = fs::read_to_string(TEMP_CONFIG_PATH)?;
+    let mut yaml_value: Value = serde_yaml::from_str(&file_content)?;
+
+    // Split the key path by '.' for nested access
+    let keys: Vec<&str> = key_path.split('.').collect();
+
+    // Traverse the Value tree and update the field
+    fn update_recursive(value: &mut Value, keys: &[&str], new_value: Value) -> CratisResult<()> {
+        if keys.is_empty() {
+            *value = new_value;
+            return Ok(());
+        }
+        match value {
+            Value::Mapping(map) => {
+                let key = Value::String(keys[0].to_string());
+                if let Some(v) = map.get_mut(&key) {
+                    update_recursive(v, &keys[1..], new_value)
+                } else {
+                    // If key doesn't exist, create it
+                    map.insert(key.clone(), Value::Null);
+                    update_recursive(map.get_mut(&key).unwrap(), &keys[1..], new_value)
+                }
+            },
+            _ => Err(CratisError::ConfigError("Error while updating config!".to_string())),
+        }
+    }
+
+    update_recursive(&mut yaml_value, &keys, new_value)?;
+
+    // Write back to file
+    let new_yaml_str = serde_yaml::to_string(&yaml_value)?;
+    fs::write(TEMP_CONFIG_PATH, new_yaml_str)?;
+
+    Ok(())
 }

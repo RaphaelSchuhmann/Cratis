@@ -5,6 +5,9 @@ use std::fs::File;
 use std::path::PathBuf;
 use tokio::fs::File as TokioFile;
 use tokio_util::io::ReaderStream;
+use reqwest::{Client, Response, StatusCode};
+use sysinfo::System;
+use std::collections::HashMap;
 
 #[derive(Parser)]
 #[command(name = "cratis")]
@@ -16,6 +19,8 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
+    // Registers device on server
+    Register,
     // Immediately trigger a backup based on the current configuration
     BackupNow,
     // Restore a specific snapshot for a given file path
@@ -34,6 +39,33 @@ pub enum Commands {
     ShowConfig,
     // Send a test request to verify server connectivity and token validity
     PingServer,
+}
+
+pub async fn register() -> CratisResult<String> {
+    let hostname: String = System::host_name().unwrap();
+    let os: String = System::name().unwrap();
+
+    let mut device_info: HashMap<String, String> = HashMap::new();
+    (&mut device_info).insert("hostname".to_string(), hostname);
+    (&mut device_info).insert("os".to_string(), os);
+
+    let client: Client = reqwest::Client::new();
+    let response: Response = client.post("http://localhost:8080/authentication/register")
+        .json(&device_info)
+        .send()
+        .await
+        .map_err(|_| CratisError::RequestError("Unable to send request"))?;
+
+    let status: StatusCode = response.status();
+    let response_body: String = response.text().await.map_err(|_| CratisError::RequestError("Invalid response"))?;
+
+    if status.is_success() {
+        Ok(response_body)
+    } else if status == reqwest::StatusCode::UNAUTHORIZED {
+        Err(CratisError::RequestError("Server not found"))
+    } else {
+        Err(CratisError::RequestError("Invalid response"))
+    }
 }
 
 pub async fn backup_now() -> CratisResult<String> {
@@ -78,13 +110,13 @@ pub async fn backup_now() -> CratisResult<String> {
     let auth_token = "test"; // TODO: Load it from config, write auth token generator
 
     let mut form = reqwest::multipart::Form::new();
-    
+
     for (std_file, file_name) in loaded_files {
         let tokio_file: TokioFile = TokioFile::from_std(std_file);
         let file_body_stream = ReaderStream::new(tokio_file);
         let body = reqwest::Body::wrap_stream(file_body_stream);
         let file_part = reqwest::multipart::Part::stream(body).file_name(file_name).mime_str("application/octet-stream").map_err(|_| CratisError::RequestError("Unable to send file"))?;
-        
+
         form = form.part("files", file_part);
     }
 
@@ -95,14 +127,14 @@ pub async fn backup_now() -> CratisResult<String> {
         .send()
         .await
         .map_err(|_| CratisError::RequestError("Unable to send request"))?;
-    
+
     let status = response.status();
     let response_body: String = response.text().await.map_err(|_| CratisError::RequestError("Invalid response"))?;
-    
+
     if status.is_success() {
         Ok(response_body)
     } else if status == reqwest::StatusCode::NOT_FOUND {
-        Err(CratisError::RequestError("Server not found"))     
+        Err(CratisError::RequestError("Server not found"))
     } else if status == reqwest::StatusCode::UNAUTHORIZED {
         Err(CratisError::RequestError("Unauthorized"))
     } else {
