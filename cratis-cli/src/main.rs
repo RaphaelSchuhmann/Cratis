@@ -1,5 +1,5 @@
 use clap::{Parser};
-use cratis_core::error::{display_msg, CratisError, CratisErrorLevel, CratisResult};
+use cratis_core::error::{display_msg, CratisErrorLevel, CratisResult};
 use crate::cli::{Commands, backup_now};
 
 mod cli;

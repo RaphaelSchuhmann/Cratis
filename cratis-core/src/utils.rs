@@ -2,7 +2,6 @@ use std::path::{Path, PathBuf};
 use std::fs;
 use std::fs::File;
 use std::io::{BufReader, Read};
-use notify::event::{EventKind};
 use std::time::{SystemTime, UNIX_EPOCH};
 use blake3::Hasher;
 use crate::error::{display_msg, CratisError, CratisResult, CratisErrorLevel};
@@ -169,48 +168,6 @@ pub fn hash_file(path: &str) -> CratisResult<String> {
     Ok(hasher.finalize().to_hex().to_string())
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum EventAction {
-    Create,
-    Modify,
-    Delete,
-    Other
-}
-
-/// Maps a file system event kind to a simplified `EventAction` enum.
-///
-/// This function converts complex file system event kinds into a simplified
-/// representation using the `EventAction` enum, making it easier to handle
-/// common file system operations.
-///
-/// # Arguments
-///
-/// * `kind` - A reference to an `EventKind` that represents the type of file system event
-///
-/// # Returns
-///
-/// Returns an `EventAction` enum variant corresponding to the input event kind:
-/// * `EventAction::Create` for creation events
-/// * `EventAction::Modify` for modification events
-/// * `EventAction::Delete` for removal events
-/// * `EventAction::Other` for any other event types
-///
-/// # Example
-///
-/// ```ignore
-/// let event_kind = EventKind::Create(CreateKind::Any);
-/// let action = map_event_kinds(&event_kind);
-/// assert_eq!(action, EventAction::Create);
-/// ```
-pub fn map_event_kinds(kind: &EventKind) -> EventAction {
-    match kind {
-        EventKind::Create(_) => EventAction::Create,
-        EventKind::Modify(_) => EventAction::Modify,
-        EventKind::Remove(_) => EventAction::Delete,
-        _ => EventAction::Other
-    }
-}
-
 /// Checks if a path matches any of the provided exclusion patterns.
 ///
 /// # Arguments
@@ -265,7 +222,7 @@ pub fn is_excluded(path: &Path, exclude_patterns: &[Pattern]) -> bool {
 /// ```
 pub fn is_path_file(dir: &str) -> bool {
     let path = Path::new(dir);
-    
+
     match fs::metadata(path) {
         Ok(metadata) => metadata.is_file(),
         Err(_) => false
@@ -314,19 +271,19 @@ pub fn get_files_in_directory(dir: &String) -> CratisResult<Vec<PathBuf>> {
         // Warning
         return Err(CratisError::InvalidPath(format!("The path has to point to a folder: {}", dir)));
     }
-    
+
     // Check if directory exists
     if !Path::new(&dir).exists() {
         // Warning
         return Err(CratisError::InvalidPath(format!("The path does not exist: {}", dir)));
     }
-    
+
     let config: &CratisConfig = crate::config::get_config();
-    
+
     let exclude_dirs: &Vec<String> = &config.backup.exclude.clone().unwrap_or_default();
 
     let mut exclude_patterns: Vec<Pattern> = Vec::new();
-    
+
     if !exclude_dirs.is_empty() {
         for pattern in exclude_dirs.iter() {
             match Pattern::new(pattern) {
@@ -335,16 +292,16 @@ pub fn get_files_in_directory(dir: &String) -> CratisResult<Vec<PathBuf>> {
             }
         }
     }
-    
+
     let path = Path::new(&dir);
     let mut file_paths: Vec<PathBuf> = Vec::new();
-    
+
     for entry in fs::read_dir(path)? {
         let entry = entry?;
         let path = entry.path();
 
         if is_excluded(&path, &exclude_patterns) { continue; }
-        
+
         if path.is_dir() {
             let sub_dir_files = get_files_in_directory(&path.to_str().unwrap().to_string())?;
             file_paths.extend(sub_dir_files);
@@ -352,7 +309,7 @@ pub fn get_files_in_directory(dir: &String) -> CratisResult<Vec<PathBuf>> {
             file_paths.push(path);
         }
     }
-    
+
     Ok(file_paths)
 }
 
@@ -394,7 +351,7 @@ pub fn load_file(file_path: PathBuf) -> CratisResult<(File, String)> {
             CratisError::IoError(e.into())
         }
     })?;
-    
+
     Ok((file, get_file_name(file_path)))
 }
 
