@@ -99,6 +99,42 @@ pub fn get_config() -> &'static CratisConfig {
     }
 }
 
+/// Updates a configuration value in the YAML file using a dot-separated key path.
+///
+/// This function reads the existing configuration file, navigates to the specified
+/// key using dot notation, updates the value, and writes the changes back to the file.
+/// Creates nested keys if they don't exist.
+///
+/// # Arguments
+///
+/// * `key_path` - Dot-separated path to the configuration key (e.g., "server.address")
+/// * `new_value` - The new value to set, as a serde_yaml::Value
+///
+/// # Returns
+///
+/// * `Ok(())` - If the configuration was successfully updated
+/// * `Err(CratisError)` - If file operations fail or the key path is invalid
+///
+/// # Examples
+///
+/// ```ignore
+/// use serde_yaml::Value;
+///
+/// // Update server address
+/// let new_addr = Value::String("0.0.0.0:9000".to_string());
+/// update_config("server.address", new_addr)?;
+///
+/// // Update nested configuration
+/// let new_mode = Value::String("incremental".to_string());
+/// update_config("backup.mode", new_mode)?;
+/// ```
+///
+/// # Errors
+///
+/// Returns `CratisError` if:
+/// * The configuration file cannot be read or written
+/// * The YAML parsing fails
+/// * The key path points to an invalid location in the configuration structure
 pub fn update_config(key_path: &str, new_value: Value) -> CratisResult<()> {
     // Read existing YAML file
     let file_content: String = fs::read_to_string(TEMP_CONFIG_PATH)?;

@@ -28,6 +28,38 @@ struct Claims {
     device_id: String
 }
 
+/// Handles device registration requests.
+///
+/// This endpoint registers a new device by generating a unique device ID from the hostname
+/// and OS, checking for duplicates in the database, and creating a JWT token for authentication.
+///
+/// # Arguments
+///
+/// * `state` - Application state containing the database connection
+/// * `payload` - JSON payload containing hostname and OS information
+///
+/// # Returns
+///k
+/// * `200 OK` with JWT token if registration is successful
+/// * `400 Bad Request` if hostname or OS is empty
+/// * `409 Conflict` if device already exists
+/// * `500 Internal Server Error` for database or JWT generation errors
+///
+/// # Examples
+///
+/// ```json
+/// // Request
+/// {
+///   "hostname": "my-laptop",
+///   "os": "linux"
+/// }
+///
+/// // Response
+/// {
+///   "status": "ok",
+///   "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+/// }
+/// ```
 pub async fn register(State(state): State<AppState>, Json(payload): Json<RegisterRequestData>) -> impl IntoResponse {
     // Validate input
     if payload.hostname.is_empty() || payload.os.is_empty() {
@@ -68,12 +100,58 @@ pub async fn register(State(state): State<AppState>, Json(payload): Json<Registe
     (StatusCode::OK, Json(json!({ "status": "ok", "token": jwt })))
 }
 
+/// Generates a unique device ID from hostname and OS information.
+///
+/// Creates a deterministic UUID v5 by combining the hostname and OS into a string,
+/// hashing it with SHA-256, and generating a UUID using the URL namespace.
+///
+/// # Arguments
+///
+/// * `hostname` - The device hostname
+/// * `os` - The operating system name
+///
+/// # Returns
+///
+/// A string representation of the generated UUID
+///
+/// # Examples
+///
+/// ```ignore
+/// let device_id = generate_device_id("laptop".to_string(), "linux".to_string());
+/// assert_eq!(device_id.len(), 36); // UUID string length
+/// ```
 fn generate_device_id(hostname: String, os: String) -> String {
     let combined: String = format!("{}/{}", hostname, os);
     let hash = Sha256::digest(combined);
     Uuid::new_v5(&Uuid::NAMESPACE_URL, &hash).to_string()
 }
 
+/// Generates a JWT token for device authentication.
+///
+/// Creates a JSON Web Token containing the device ID as a claim, signed with
+/// the JWT_SECRET environment variable. Returns None if the secret is not set
+/// or token generation fails.
+///
+/// # Arguments
+///
+/// * `device_id` - The unique device identifier to include in the token
+///
+/// # Returns
+///
+/// * `Some(String)` - The generated JWT token
+/// * `None` - If JWT_SECRET is not set or token generation fails
+///
+/// # Environment Variables
+///
+/// * `JWT_SECRET` - Secret key used for signing the JWT token
+///
+/// # Examples
+///
+/// ```ignore
+/// std::env::set_var("JWT_SECRET", "my-secret-key");
+/// let token = generate_jwt("device-123".to_string());
+/// assert!(token.is_some());
+/// ```
 fn generate_jwt(device_id: String) -> Option<String> {
     match std::env::var("JWT_SECRET") {
         Ok(secret) => {
