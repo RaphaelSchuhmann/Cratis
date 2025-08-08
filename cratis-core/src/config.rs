@@ -6,7 +6,7 @@ use std::fs;
 use crate::error::{display_msg, CratisError, CratisErrorLevel, CratisResult};
 
 // TODO: Remove this later on when a proper .yml selection is implemented
-pub static TEMP_CONFIG_PATH: &str = "/home/raphael/Development/Cratis/cratis.yml";
+pub static TEMP_CONFIG_PATH: &str = "/home/raphael/Development/Cratis/cratis.db.yml";
 
 #[derive(Debug, Deserialize)]
 pub struct CratisConfig {
@@ -83,7 +83,7 @@ pub fn load_config(path: &str) {
 ///
 /// Panics if the configuration cannot be loaded.
 pub fn get_config() -> &'static CratisConfig {
-    let config = CONFIG.get();
+    let config: Option<&CratisConfig> = CONFIG.get();
 
     if config.is_none() {
         load_config(TEMP_CONFIG_PATH);
@@ -101,7 +101,7 @@ pub fn get_config() -> &'static CratisConfig {
 
 pub fn update_config(key_path: &str, new_value: Value) -> CratisResult<()> {
     // Read existing YAML file
-    let file_content = fs::read_to_string(TEMP_CONFIG_PATH)?;
+    let file_content: String = fs::read_to_string(TEMP_CONFIG_PATH)?;
     let mut yaml_value: Value = serde_yaml::from_str(&file_content)?;
 
     // Split the key path by '.' for nested access
@@ -131,7 +131,7 @@ pub fn update_config(key_path: &str, new_value: Value) -> CratisResult<()> {
     update_recursive(&mut yaml_value, &keys, new_value)?;
 
     // Write back to file
-    let new_yaml_str = serde_yaml::to_string(&yaml_value)?;
+    let new_yaml_str: String = serde_yaml::to_string(&yaml_value)?;
     fs::write(TEMP_CONFIG_PATH, new_yaml_str)?;
 
     Ok(())

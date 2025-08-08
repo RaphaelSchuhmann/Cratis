@@ -33,14 +33,14 @@ pub enum CratisError {
     #[error("Internal error: {0}")]
     Internal(&'static str),
 
-    #[error("Watch error: {0}")]
-    WatcherError(String),
-
-    #[error("Channel error: {0}")]
-    ChannelError(String),
-
     #[error("Request error: {0}")]
     RequestError(&'static str),
+    
+    #[error("Database error: {0}")]
+    DatabaseError(String),
+    
+    #[error("Error generating token: {0}")]
+    TokenError(String),
     
     #[error("Unknown error")]
     Unknown,

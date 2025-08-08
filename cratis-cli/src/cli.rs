@@ -10,7 +10,7 @@ use sysinfo::System;
 use std::collections::HashMap;
 
 #[derive(Parser)]
-#[command(name = "cratis")]
+#[command(name = "cratis.db")]
 # [command(about = "Manage your backups", long_about = None)]
 pub struct Cli {
     #[command(subcommand)]
@@ -49,7 +49,7 @@ pub async fn register() -> CratisResult<String> {
     (&mut device_info).insert("hostname".to_string(), hostname);
     (&mut device_info).insert("os".to_string(), os);
 
-    let client: Client = reqwest::Client::new();
+    let client: Client = Client::new();
     let response: Response = client.post("http://localhost:8080/authentication/register")
         .json(&device_info)
         .send()
