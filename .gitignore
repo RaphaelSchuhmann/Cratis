@@ -34,7 +34,7 @@ target/
 
 # Database files
 *.db
-cratis-db/
+cratis.db/
 
 # Environmnet files
-.env
+.env*
