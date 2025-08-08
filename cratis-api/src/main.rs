@@ -1,6 +1,5 @@
 use axum::{Router, routing::post};
 use crate::handler::authentication::register;
-use cratis_core::error::{CratisError, display_msg, CratisErrorLevel};
 use polodb_core::Database;
 use std::sync::Arc;
 
