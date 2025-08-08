@@ -1,12 +1,15 @@
-use axum::{Json, response::IntoResponse, http::StatusCode, extract::State};
-use jsonwebtoken::{encode, EncodingKey, Header};
+use axum::{Json, response::IntoResponse, http::StatusCode};
+use axum::middleware::Next;
+use axum::response::Response;
+use http::Request;
+use jsonwebtoken::{encode, EncodingKey, Header, decode, DecodingKey, Validation, Algorithm};
 use polodb_core::{CollectionT, bson::doc, Collection};
-use crate::AppState;
 use serde_json::{json};
 use serde::{Deserialize, Serialize};
 use sha2::{Sha256, Digest};
 use uuid::Uuid;
 use cratis_core::error::{display_msg, CratisError, CratisErrorLevel};
+use crate::DB;
 
 // Request Structs
 #[derive(Deserialize)]
@@ -23,7 +26,7 @@ pub struct Device {
 }
 
 // JWT Struct
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 struct Claims {
     device_id: String
 }
@@ -60,7 +63,7 @@ struct Claims {
 ///   "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
 /// }
 /// ```
-pub async fn register(State(state): State<AppState>, Json(payload): Json<RegisterRequestData>) -> impl IntoResponse {
+pub async fn register(Json(payload): Json<RegisterRequestData>) -> impl IntoResponse {
     // Validate input
     if payload.hostname.is_empty() || payload.os.is_empty() {
         return (StatusCode::BAD_REQUEST, Json(json!({"error": "hostname and os are required"})));
@@ -70,7 +73,7 @@ pub async fn register(State(state): State<AppState>, Json(payload): Json<Registe
     let device_id: String = generate_device_id(payload.hostname, payload.os);
 
     // Define collection and check if device id already exists in database
-    let collection: Collection<Device> = state.db.collection::<Device>("devices");
+    let collection: Collection<Device> = DB.collection::<Device>("devices");
     let check_id: Result<Option<Device>, polodb_core::Error> = collection.find_one(doc! { "device_id": &device_id });
 
     if let Ok(Some(_)) = check_id {
@@ -98,6 +101,38 @@ pub async fn register(State(state): State<AppState>, Json(payload): Json<Registe
 
     // Return if successful
     (StatusCode::OK, Json(json!({ "status": "ok", "token": jwt })))
+}
+
+pub async fn authenticate_middleware(mut req: Request<axum::body::Body>, next: Next) -> Result<Response, StatusCode> {
+    let auth_header = req.headers().get(axum::http::header::AUTHORIZATION).and_then(|h| h.to_str().ok());
+
+    if let Some(auth_value) = auth_header {
+        if let Some(token) = auth_value.strip_prefix("Bearer ") {
+            match decode_token(token) {
+                Ok(claims) => {
+                    // Check if device_id is in db
+                    let collection: Collection<Device> = DB.collection::<Device>("devices");
+                    let result: Result<Option<Device>, polodb_core::Error> = collection.find_one(doc! { "device_id": &claims.device_id });
+
+                    // Handle database error
+                    if let Err(e) = result {
+                        display_msg(Some(&CratisError::DatabaseError(e.to_string())), CratisErrorLevel::Warning, None);
+                        return Err(StatusCode::INTERNAL_SERVER_ERROR)
+                    }
+
+                    if let Ok(Some(_)) = result {
+                        req.extensions_mut().insert(claims);
+                        return Ok(next.run(req).await);
+                    } else {
+                        return Err(StatusCode::UNAUTHORIZED)
+                    }
+                }
+                Err(_) => return Err(StatusCode::UNAUTHORIZED)
+            }
+        }
+    }
+
+    Err(StatusCode::UNAUTHORIZED)
 }
 
 /// Generates a unique device ID from hostname and OS information.
@@ -169,4 +204,21 @@ fn generate_jwt(device_id: String) -> Option<String> {
             None
         }
     }
+}
+
+fn decode_token(token: &str) ->  Result<Claims, jsonwebtoken::errors::Error> {
+    let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
+
+    let mut validation = Validation::default();
+    validation.validate_exp = false;
+    validation.algorithms = vec![Algorithm::HS256];
+    validation.required_spec_claims.remove("exp");
+
+    let token_data = decode::<Claims>(
+        token,
+        &DecodingKey::from_secret(secret.as_bytes()),
+        &validation,
+    )?;
+
+    Ok(token_data.claims)
 }
