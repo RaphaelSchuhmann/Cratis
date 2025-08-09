@@ -1,8 +1,9 @@
 #![allow(dead_code)]
 use serde::Deserialize;
 use once_cell::sync::OnceCell;
+use serde_yaml::{Value};
 use std::fs;
-use crate::error::{display_msg, CratisError, CratisErrorLevel};
+use crate::error::{display_msg, CratisError, CratisErrorLevel, CratisResult};
 
 // TODO: Remove this later on when a proper .yml selection is implemented
 pub static TEMP_CONFIG_PATH: &str = "/home/raphael/Development/Cratis/cratis.yml";
@@ -82,18 +83,92 @@ pub fn load_config(path: &str) {
 ///
 /// Panics if the configuration cannot be loaded.
 pub fn get_config() -> &'static CratisConfig {
-    let config = CONFIG.get();
-    
+    let config: Option<&CratisConfig> = CONFIG.get();
+
     if config.is_none() {
         load_config(TEMP_CONFIG_PATH);
-        
+
         if config.is_none() {
             display_msg(Some(&CratisError::ConfigError("Unable to load config".to_string())), CratisErrorLevel::Fatal, None);
-            unreachable!()   
+            unreachable!()
         } else {
             CONFIG.get().unwrap()
         }
     } else {
         config.unwrap()
     }
+}
+
+/// Updates a configuration value in the YAML file using a dot-separated key path.
+///
+/// This function reads the existing configuration file, navigates to the specified
+/// key using dot notation, updates the value, and writes the changes back to the file.
+/// Creates nested keys if they don't exist.
+///
+/// # Arguments
+///
+/// * `key_path` - Dot-separated path to the configuration key (e.g., "server.address")
+/// * `new_value` - The new value to set, as a serde_yaml::Value
+///
+/// # Returns
+///
+/// * `Ok(())` - If the configuration was successfully updated
+/// * `Err(CratisError)` - If file operations fail or the key path is invalid
+///
+/// # Examples
+///
+/// ```ignore
+/// use serde_yaml::Value;
+///
+/// // Update server address
+/// let new_addr = Value::String("0.0.0.0:9000".to_string());
+/// update_config("server.address", new_addr)?;
+///
+/// // Update nested configuration
+/// let new_mode = Value::String("incremental".to_string());
+/// update_config("backup.mode", new_mode)?;
+/// ```
+///
+/// # Errors
+///
+/// Returns `CratisError` if:
+/// * The configuration file cannot be read or written
+/// * The YAML parsing fails
+/// * The key path points to an invalid location in the configuration structure
+pub fn update_config(key_path: &str, new_value: Value) -> CratisResult<()> {
+    // Read existing YAML file
+    let file_content: String = fs::read_to_string(TEMP_CONFIG_PATH)?;
+    let mut yaml_value: Value = serde_yaml::from_str(&file_content)?;
+
+    // Split the key path by '.' for nested access
+    let keys: Vec<&str> = key_path.split('.').collect();
+
+    // Traverse the Value tree and update the field
+    fn update_recursive(value: &mut Value, keys: &[&str], new_value: Value) -> CratisResult<()> {
+        if keys.is_empty() {
+            *value = new_value;
+            return Ok(());
+        }
+        match value {
+            Value::Mapping(map) => {
+                let key = Value::String(keys[0].to_string());
+                if let Some(v) = map.get_mut(&key) {
+                    update_recursive(v, &keys[1..], new_value)
+                } else {
+                    // If key doesn't exist, create it
+                    map.insert(key.clone(), Value::Null);
+                    update_recursive(map.get_mut(&key).unwrap(), &keys[1..], new_value)
+                }
+            },
+            _ => Err(CratisError::ConfigError("Error while updating config!".to_string())),
+        }
+    }
+
+    update_recursive(&mut yaml_value, &keys, new_value)?;
+
+    // Write back to file
+    let new_yaml_str: String = serde_yaml::to_string(&yaml_value)?;
+    fs::write(TEMP_CONFIG_PATH, new_yaml_str)?;
+
+    Ok(())
 }

@@ -24,7 +24,17 @@ target/
 /dataSources/
 /dataSources.local.xml
 
-# Verbaq
+# Visual Studio Code
+.vscode/
+
+# Cratis
 # Any config files
 *.yml
 *.yaml
+
+# Database files
+*.db
+cratis.db/
+
+# Environmnet files
+.env*

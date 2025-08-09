@@ -33,15 +33,18 @@ pub enum CratisError {
     #[error("Internal error: {0}")]
     Internal(&'static str),
 
-    #[error("Watch error: {0}")]
-    WatcherError(String),
-
-    #[error("Channel error: {0}")]
-    ChannelError(String),
-
     #[error("Request error: {0}")]
     RequestError(&'static str),
-    
+
+    #[error("Database error: {0}")]
+    DatabaseError(String),
+
+    #[error("Error generating token: {0}")]
+    TokenError(String),
+
+    #[error("Environment error: {0}")]
+    EnvError(String),
+
     #[error("Unknown error")]
     Unknown,
 }
@@ -81,7 +84,7 @@ pub type CratisResult<T> = Result<T, CratisError>;
 pub fn display_msg(error: Option<&CratisError>, level: CratisErrorLevel, msg: Option<String> /* msg is for info messages only */) {
     let error = error.unwrap_or(&CratisError::Unknown);
     let msg = msg.unwrap_or("".to_string());
-    
+
     if level == CratisErrorLevel::Info {
         eprintln!("Info: \n{msg}");
     } else if level == CratisErrorLevel::Warning {
