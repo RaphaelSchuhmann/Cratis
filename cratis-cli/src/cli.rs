@@ -42,6 +42,41 @@ pub enum Commands {
     PingServer,
 }
 
+/// Registers the current device with the Cratis server.
+///
+/// This function collects system information (hostname and OS) and sends a registration
+/// request to the server. Upon successful registration, it returns an authentication token
+/// that can be used for subsequent API calls.
+///
+/// # Returns
+///
+/// * `Ok(String)` - The authentication token received from the server
+/// * `Err(CratisError)` - If registration fails due to:
+///   - Network connectivity issues
+///   - Server not found (404)
+///   - Device already registered (409)
+///   - Invalid server response
+///   - Unable to retrieve system information
+///
+/// # Examples
+///
+/// ```ignore
+/// match register().await {
+///     Ok(token) => println!("Registration successful! Token: {}", token),
+///     Err(e) => eprintln!("Registration failed: {}", e),
+/// }
+/// ```
+///
+/// # Network Requirements
+///
+/// * Server must be running at `http://localhost:8080`
+/// * `/register` endpoint must be available
+/// * Device must have network connectivity
+///
+/// # System Information Collected
+///
+/// * Hostname - Retrieved from system information
+/// * Operating System - Retrieved from system information
 pub async fn register() -> CratisResult<String> {
     let hostname: String = System::host_name().ok_or(CratisError::Unknown)?;
     let os: String = System::name().ok_or(CratisError::Unknown)?;
@@ -69,8 +104,10 @@ pub async fn register() -> CratisResult<String> {
             Err(CratisError::RequestError("Invalid response: Token missing!"))
         }
 
-    } else if status == reqwest::StatusCode::UNAUTHORIZED {
+    } else if status == StatusCode::NOT_FOUND {
         Err(CratisError::RequestError("Server not found"))
+    } else if status == StatusCode::CONFLICT {
+        Err(CratisError::RequestError("Device already registered"))
     } else {
         Err(CratisError::RequestError("Invalid response"))
     }
