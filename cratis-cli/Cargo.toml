@@ -12,3 +12,4 @@ tokio = { version = "1", features = ["full"] }
 tokio-util = { version = "0.7", features = ["io"] }
 sysinfo = "0.36.1"
 serde_yaml = "0.9.33"
+serde_json = "1.0.142"

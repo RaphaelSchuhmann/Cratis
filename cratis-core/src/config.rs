@@ -6,7 +6,7 @@ use std::fs;
 use crate::error::{display_msg, CratisError, CratisErrorLevel, CratisResult};
 
 // TODO: Remove this later on when a proper .yml selection is implemented
-pub static TEMP_CONFIG_PATH: &str = "/home/raphael/Development/Cratis/cratis.db.yml";
+pub static TEMP_CONFIG_PATH: &str = "/home/raphael/Development/Cratis/cratis.yml";
 
 #[derive(Debug, Deserialize)]
 pub struct CratisConfig {

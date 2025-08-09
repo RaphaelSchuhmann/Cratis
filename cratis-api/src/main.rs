@@ -26,16 +26,16 @@ async fn main() {
     }
 
     // Router
-    let auth_routes = Router::new()
-        // Put any routes that need authentication here
-        .route_layer(middleware::from_fn(authenticate_middleware));
+    // let auth_routes = Router::new()
+    //     // Put any routes that need authentication here
+    //     .route_layer(middleware::from_fn(authenticate_middleware));
 
     let public_routes = Router::new()
         .route("/register", post(register));
 
     let app = Router::new()
-        .merge(public_routes)
-        .merge(auth_routes);
+        .merge(public_routes);
+        // .merge(auth_routes);
 
     // Start server
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();

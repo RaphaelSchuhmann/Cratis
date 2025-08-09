@@ -194,10 +194,13 @@ fn generate_jwt(device_id: String) -> Option<String> {
 
             let claims = Claims { device_id };
 
-            let token = encode(&Header::default(), &claims, &encoding_key)
-                .map_err(|e| {display_msg(Some(&CratisError::TokenError(e.to_string())), CratisErrorLevel::Warning, None)});
-
-            Some(token.unwrap())
+            match encode(&Header::default(), &claims, &encoding_key) {
+                Ok(t) => Some(t),
+                Err(e) => {
+                    display_msg(Some(&CratisError::TokenError(e.to_string())), CratisErrorLevel::Warning, None);
+                    None
+                }
+            }
         }
         Err(e) => {
             display_msg(Some(&CratisError::TokenError(e.to_string())), CratisErrorLevel::Warning, None);

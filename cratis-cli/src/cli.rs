@@ -8,6 +8,7 @@ use tokio_util::io::ReaderStream;
 use reqwest::{Client, Response, StatusCode};
 use sysinfo::System;
 use std::collections::HashMap;
+use serde_json::Value;
 
 #[derive(Parser)]
 #[command(name = "cratis.db")]
@@ -42,15 +43,15 @@ pub enum Commands {
 }
 
 pub async fn register() -> CratisResult<String> {
-    let hostname: String = System::host_name().unwrap();
-    let os: String = System::name().unwrap();
+    let hostname: String = System::host_name().ok_or(CratisError::Unknown)?;
+    let os: String = System::name().ok_or(CratisError::Unknown)?;
 
     let mut device_info: HashMap<String, String> = HashMap::new();
     (&mut device_info).insert("hostname".to_string(), hostname);
     (&mut device_info).insert("os".to_string(), os);
 
     let client: Client = Client::new();
-    let response: Response = client.post("http://localhost:8080/authentication/register")
+    let response: Response = client.post("http://localhost:8080/register")
         .json(&device_info)
         .send()
         .await
@@ -60,7 +61,14 @@ pub async fn register() -> CratisResult<String> {
     let response_body: String = response.text().await.map_err(|_| CratisError::RequestError("Invalid response"))?;
 
     if status.is_success() {
-        Ok(response_body)
+        let json_value: Value = serde_json::from_str(&response_body).map_err(|_| CratisError::RequestError("Invalid response"))?;
+
+        if let Some(token) = json_value.get("token").and_then(|v| v.as_str()) {
+            return Ok(token.to_string());
+        } else {
+            Err(CratisError::RequestError("Invalid response: Token missing!"))
+        }
+
     } else if status == reqwest::StatusCode::UNAUTHORIZED {
         Err(CratisError::RequestError("Server not found"))
     } else {
