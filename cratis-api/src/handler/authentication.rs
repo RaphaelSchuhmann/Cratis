@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 use axum::{Json, response::IntoResponse, http::StatusCode};
 use axum::middleware::Next;
 use axum::response::Response;

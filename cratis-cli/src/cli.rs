@@ -113,6 +113,22 @@ pub async fn register() -> CratisResult<String> {
     }
 }
 
+pub async fn ping_server() -> CratisResult<String> {
+    let client: Client = Client::new();
+    let response: Response = client.get("http://127.0.0.1:8080/ping")
+        .send()
+        .await
+        .map_err(|_| CratisError::ConnectionIssue("Unable to send request, server is not reachable!"))?;
+
+    let status: StatusCode = response.status();
+
+    if status == StatusCode::OK {
+        Ok("Server is reachable!".to_string())
+    } else {
+        Err(CratisError::Unknown)
+    }
+}
+
 pub async fn backup_now() -> CratisResult<String> {
     let config = cratis_core::config::get_config();
     let watch_dirs = &config.backup.watch_directories;
