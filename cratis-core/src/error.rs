@@ -39,7 +39,7 @@ pub enum CratisError {
     #[error("Database error: {0}")]
     DatabaseError(String),
 
-    #[error("Error generating token: {0}")]
+    #[error("Error generating token: {0}")] 
     TokenError(String),
 
     #[error("Environment error: {0}")]

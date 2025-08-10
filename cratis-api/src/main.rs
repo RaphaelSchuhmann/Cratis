@@ -1,8 +1,8 @@
-use axum::{Router, routing::post, middleware};
-use crate::handler::authentication::{authenticate_middleware, register};
+#[allow(unused_imports)]
+use axum::{Router, routing::post, routing::get, middleware};
+use crate::handler::{authentication::{authenticate_middleware, register}, health_check::health_check};
 use polodb_core::Database;
 use std::sync::Arc;
-use axum::response::IntoResponse;
 use once_cell::sync::Lazy;
 use cratis_core::error::{display_msg, CratisError, CratisErrorLevel};
 
@@ -31,7 +31,8 @@ async fn main() {
     //     .route_layer(middleware::from_fn(authenticate_middleware));
 
     let public_routes = Router::new()
-        .route("/register", post(register));
+        .route("/register", post(register))
+        .route("/ping", get(health_check));
 
     let app = Router::new()
         .merge(public_routes);

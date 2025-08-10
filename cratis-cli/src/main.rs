@@ -1,7 +1,7 @@
 use clap::{Parser};
 use cratis_core::error::{display_msg, CratisErrorLevel, CratisResult};
 use cratis_core::config::{update_config, load_config, TEMP_CONFIG_PATH};
-use crate::cli::{Commands, register, backup_now};
+use crate::cli::{Commands, register, backup_now, ping_server};
 use serde_yaml::Value;
 
 mod cli;
@@ -42,7 +42,12 @@ async fn main() {
             println!("List versions of {}", file);
         }
         Commands::PingServer {} => {
-            println!("Ping server");
+            display_msg(None, CratisErrorLevel::Info, Some("Pinging server...".to_string()));
+
+            match ping_server().await {
+                Ok(msg) => display_msg(None, CratisErrorLevel::Info, Some(msg)),
+                Err(e) => display_msg(Some(&e), CratisErrorLevel::Fatal, None)
+            }
         }
         Commands::ShowConfig {} => {
             println!("Getting Config");
