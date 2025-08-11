@@ -278,7 +278,7 @@ pub fn get_files_in_directory(dir: &String) -> CratisResult<Vec<PathBuf>> {
         return Err(CratisError::InvalidPath(format!("The path does not exist: {}", dir)));
     }
 
-    let config: &CratisConfig = crate::config::get_config();
+    let config: &CratisConfig = crate::config::get_config_cli();
 
     let exclude_dirs: &Vec<String> = &config.backup.exclude.clone().unwrap_or_default();
 

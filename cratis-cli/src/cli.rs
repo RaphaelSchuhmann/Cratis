@@ -130,7 +130,7 @@ pub async fn ping_server() -> CratisResult<String> {
 }
 
 pub async fn backup_now() -> CratisResult<String> {
-    let config = cratis_core::config::get_config();
+    let config = cratis_core::config::get_config_cli();
     let watch_dirs = &config.backup.watch_directories;
 
     let mut files_to_load: Vec<PathBuf> = Vec::new();

@@ -7,6 +7,7 @@ use crate::error::{display_msg, CratisError, CratisErrorLevel, CratisResult};
 
 // TODO: Remove this later on when a proper .yml selection is implemented
 pub static TEMP_CONFIG_PATH: &str = "/home/raphael/Development/Cratis/cratis.yml";
+pub static TEMP_API_CONFIG_PATH: &str = "/home/raphael/Development/Cratis/cratis-api/config.yml";
 
 #[derive(Debug, Deserialize)]
 pub struct CratisConfig {
@@ -51,51 +52,68 @@ pub struct AdvancedConfig {
     pub enable_notifications: Option<bool>
 }
 
-static CONFIG: OnceCell<CratisConfig> = OnceCell::new();
-
-/// Loads the application configuration from a YAML file and initializes the global configuration.
-///
-/// Reads the configuration file at the specified path, parses its contents as YAML into a `CratisConfig` instance, and stores it in the global configuration container. Panics if the file cannot be read, the YAML is invalid, or the configuration has already been initialized.
-///
-/// # Examples
-///
-/// ```ignore
-/// load_config("config.yaml");
-/// let config = get_config();
-/// assert_eq!(config.client.name, "example-client");
-/// ```
-pub fn load_config(path: &str) {
-    let contents = fs::read_to_string(path).expect("Failed to read config file");
-    let parsed: CratisConfig = serde_yaml::from_str(&contents).expect("Invalid config format");
-    CONFIG.set(parsed).expect("Config initialized");
+#[derive(Debug, Deserialize)]
+pub struct CratisServerConfig {
+    pub port: u16,
+    pub env: String,
+    pub db: String,
 }
 
-/// Returns a reference to the global application configuration.
+static CONFIG_CLI: OnceCell<CratisConfig> = OnceCell::new();
+static CONFIG_API: OnceCell<CratisServerConfig> = OnceCell::new();
+
+
+/// Loads configuration from a YAML file into global static storage.
 ///
-/// If the configuration hasn't been loaded yet, attempts to load it from
-/// the default path. Displays an error and panics if loading fails.
+/// # Arguments
 ///
-/// # Returns
-///
-/// A static reference to the `CratisConfig` instance.
+/// * `path` - Path to the configuration file
+/// * `api` - If true, loads server config; if false, loads client config
 ///
 /// # Panics
 ///
-/// Panics if the configuration cannot be loaded.
-pub fn get_config() -> &'static CratisConfig {
-    let config: Option<&CratisConfig> = CONFIG.get();
+/// Panics if the file cannot be read or parsed.
+pub fn load_config(path: &str, api: bool) {
+    let contents = fs::read_to_string(path).expect("Failed to read config file");
 
-    if config.is_none() {
-        load_config(TEMP_CONFIG_PATH);
+    if api {
+        let parsed: CratisServerConfig = serde_yaml::from_str(&contents).expect("Invalid config format");
+        CONFIG_API.set(parsed).expect("Config initialized");
+        return;
+    }
 
-        if config.is_none() {
+    let parsed: CratisConfig = serde_yaml::from_str(&contents).expect("Invalid config format");
+    CONFIG_CLI.set(parsed).expect("Config initialized");
+}
+
+
+pub fn get_config_cli() -> &'static CratisConfig {
+    if CONFIG_CLI.get().is_none() {
+        load_config(TEMP_CONFIG_PATH, false);
+
+        if CONFIG_CLI.get().is_none() {
             display_msg(Some(&CratisError::ConfigError("Unable to load config".to_string())), CratisErrorLevel::Fatal, None);
             unreachable!()
         } else {
-            CONFIG.get().unwrap()
+            CONFIG_CLI.get().unwrap()
         }
     } else {
-        config.unwrap()
+        CONFIG_CLI.get().unwrap()
+    }
+}
+
+pub fn get_config_api() -> &'static CratisServerConfig {
+    if CONFIG_API.get().is_none() {
+        load_config(TEMP_API_CONFIG_PATH, true);
+        
+        if CONFIG_API.get().is_none() {
+            display_msg(Some(&CratisError::ConfigError("Unable to load config".to_string())), CratisErrorLevel::Fatal, None);
+            unreachable!()
+        } else {
+            CONFIG_API.get().unwrap()
+        }
+    } else {
+        CONFIG_API.get().unwrap()
     }
 }
 
@@ -135,9 +153,9 @@ pub fn get_config() -> &'static CratisConfig {
 /// * The configuration file cannot be read or written
 /// * The YAML parsing fails
 /// * The key path points to an invalid location in the configuration structure
-pub fn update_config(key_path: &str, new_value: Value) -> CratisResult<()> {
+pub fn update_config(key_path: &str, config_path: &str, new_value: Value) -> CratisResult<()> {
     // Read existing YAML file
-    let file_content: String = fs::read_to_string(TEMP_CONFIG_PATH)?;
+    let file_content: String = fs::read_to_string(config_path)?;
     let mut yaml_value: Value = serde_yaml::from_str(&file_content)?;
 
     // Split the key path by '.' for nested access
@@ -168,7 +186,7 @@ pub fn update_config(key_path: &str, new_value: Value) -> CratisResult<()> {
 
     // Write back to file
     let new_yaml_str: String = serde_yaml::to_string(&yaml_value)?;
-    fs::write(TEMP_CONFIG_PATH, new_yaml_str)?;
+    fs::write(config_path, new_yaml_str)?;
 
     Ok(())
 }
