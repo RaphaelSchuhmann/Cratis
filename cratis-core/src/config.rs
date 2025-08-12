@@ -87,6 +87,14 @@ pub fn load_config(path: &str, api: bool) {
 }
 
 
+/// Returns a reference to the global CLI configuration.
+///
+/// Lazily loads the configuration from the default path if not already loaded.
+/// Terminates the program if configuration loading fails.
+///
+/// # Returns
+///
+/// A static reference to the loaded `CratisConfig`
 pub fn get_config_cli() -> &'static CratisConfig {
     if CONFIG_CLI.get().is_none() {
         load_config(TEMP_CONFIG_PATH, false);
@@ -102,6 +110,14 @@ pub fn get_config_cli() -> &'static CratisConfig {
     }
 }
 
+/// Returns a reference to the global API server configuration.
+///
+/// Lazily loads the configuration from the default path if not already loaded.
+/// Terminates the program if configuration loading fails.
+///
+/// # Returns
+///
+/// A static reference to the loaded `CratisServerConfig`
 pub fn get_config_api() -> &'static CratisServerConfig {
     if CONFIG_API.get().is_none() {
         load_config(TEMP_API_CONFIG_PATH, true);
