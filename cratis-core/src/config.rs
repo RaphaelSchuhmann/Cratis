@@ -14,7 +14,6 @@ pub struct CratisConfig {
     pub client: ClientConfig,
     pub backup: BackupConfig,
     pub server: ServerConfig,
-    pub advanced: Option<AdvancedConfig>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -25,31 +24,14 @@ pub struct ClientConfig {
 
 #[derive(Debug, Deserialize)]
 pub struct BackupConfig {
-    pub mode: BackupMode,
     pub watch_directories: Vec<String>,
     pub exclude: Option<Vec<String>>,
-    pub interval_seconds: Option<u64>,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum BackupMode {
-    Full,
-    Incremental,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct ServerConfig {
     pub address: String,
     pub auth_token: String
-}
-
-#[derive(Debug, Deserialize)]
-pub struct AdvancedConfig {
-    pub max_file_size_mb: Option<u64>,
-    pub retry_attempts: Option<u32>,
-    pub retry_delay_seconds: Option<u64>,
-    pub enable_notifications: Option<bool>
 }
 
 #[derive(Debug, Deserialize)]
@@ -126,7 +108,7 @@ pub fn get_config_cli() -> &'static CratisConfig {
 pub fn get_config_api() -> &'static CratisServerConfig {
     if CONFIG_API.get().is_none() {
         load_config(TEMP_API_CONFIG_PATH, true);
-        
+
         if CONFIG_API.get().is_none() {
             display_msg(Some(&CratisError::ConfigError("Unable to load config".to_string())), CratisErrorLevel::Fatal, None);
             unreachable!()

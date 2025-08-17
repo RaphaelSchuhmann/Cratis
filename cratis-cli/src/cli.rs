@@ -9,6 +9,7 @@ use reqwest::{Client, Response, StatusCode};
 use sysinfo::System;
 use std::collections::HashMap;
 use serde_json::Value;
+use cratis_core::config::get_config_cli;
 
 #[derive(Parser)]
 #[command(name = "cratis.db")]
@@ -86,7 +87,7 @@ pub async fn register() -> CratisResult<String> {
     (&mut device_info).insert("os".to_string(), os);
 
     let client: Client = Client::new();
-    let response: Response = client.post("http://localhost:8080/register")
+    let response: Response = client.post(format!("{}/register", get_config_cli().server.address))
         .json(&device_info)
         .send()
         .await
@@ -99,7 +100,7 @@ pub async fn register() -> CratisResult<String> {
         let json_value: Value = serde_json::from_str(&response_body).map_err(|_| CratisError::RequestError("Invalid response"))?;
 
         if let Some(token) = json_value.get("token").and_then(|v| v.as_str()) {
-            return Ok(token.to_string());
+            Ok(token.to_string())
         } else {
             Err(CratisError::RequestError("Invalid response: Token missing!"))
         }
@@ -115,7 +116,7 @@ pub async fn register() -> CratisResult<String> {
 
 pub async fn ping_server() -> CratisResult<String> {
     let client: Client = Client::new();
-    let response: Response = client.get("http://127.0.0.1:8080/ping")
+    let response: Response = client.get(format!("{}/ping", get_config_cli().server.address))
         .send()
         .await
         .map_err(|_| CratisError::ConnectionIssue("Unable to send request, server is not reachable!"))?;
@@ -130,8 +131,7 @@ pub async fn ping_server() -> CratisResult<String> {
 }
 
 pub async fn backup_now() -> CratisResult<String> {
-    let config = cratis_core::config::get_config_cli();
-    let watch_dirs = &config.backup.watch_directories;
+    let watch_dirs = &get_config_cli().backup.watch_directories;
 
     let mut files_to_load: Vec<PathBuf> = Vec::new();
 
@@ -166,9 +166,6 @@ pub async fn backup_now() -> CratisResult<String> {
     }
 
     // Put loaded files into request body
-    let client = reqwest::Client::new();
-    let api_url = "http://localhost:8080/upload"; // TODO: Make this configurable
-    let auth_token = "test"; // TODO: Load it from config, write auth token generator
 
     let mut form = reqwest::multipart::Form::new();
 
@@ -181,9 +178,12 @@ pub async fn backup_now() -> CratisResult<String> {
         form = form.part("files", file_part);
     }
 
+    let client = Client::new();
+    let config = get_config_cli();
+
     // Send request
-    let response = client.post(api_url)
-        .bearer_auth(auth_token)
+    let response = client.post(format!("{}/backup", config.server.address))
+        .bearer_auth(config.server.auth_token.clone())
         .multipart(form)
         .send()
         .await
@@ -194,9 +194,9 @@ pub async fn backup_now() -> CratisResult<String> {
 
     if status.is_success() {
         Ok(response_body)
-    } else if status == reqwest::StatusCode::NOT_FOUND {
+    } else if status == StatusCode::NOT_FOUND {
         Err(CratisError::RequestError("Server not found"))
-    } else if status == reqwest::StatusCode::UNAUTHORIZED {
+    } else if status == StatusCode::UNAUTHORIZED {
         Err(CratisError::RequestError("Unauthorized"))
     } else {
         Err(CratisError::RequestError("Invalid response"))
