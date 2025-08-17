@@ -39,7 +39,7 @@ pub enum CratisError {
     #[error("Database error: {0}")]
     DatabaseError(String),
 
-    #[error("Error generating token: {0}")] 
+    #[error("Error generating token: {0}")]
     TokenError(String),
 
     #[error("Environment error: {0}")]
@@ -86,11 +86,11 @@ pub fn display_msg(error: Option<&CratisError>, level: CratisErrorLevel, msg: Op
     let msg = msg.unwrap_or("".to_string());
 
     if level == CratisErrorLevel::Info {
-        eprintln!("Info: \n{msg}");
+        eprintln!("Info: {msg}");
     } else if level == CratisErrorLevel::Warning {
-        eprintln!("Warning: \n{error}");
+        eprintln!("Warning: {error}");
     } else if level == CratisErrorLevel::Fatal {
-        eprintln!("Fatal error: \n{error}");
+        eprintln!("Fatal error: {error}");
         std::process::exit(1);
     }
 }
