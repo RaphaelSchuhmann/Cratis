@@ -9,6 +9,7 @@ use serde_json::{json};
 use serde::{Deserialize, Serialize};
 use sha2::{Sha256, Digest};
 use uuid::Uuid;
+use cratis_core::config::get_config_api;
 use cratis_core::error::{display_msg, CratisError, CratisErrorLevel};
 use crate::DB;
 
@@ -105,7 +106,7 @@ pub async fn register(Json(payload): Json<RegisterRequestData>) -> impl IntoResp
 }
 
 pub async fn authenticate_middleware(mut req: Request<axum::body::Body>, next: Next) -> Result<Response, StatusCode> {
-    let auth_header = req.headers().get(axum::http::header::AUTHORIZATION).and_then(|h| h.to_str().ok());
+    let auth_header = req.headers().get(http::header::AUTHORIZATION).and_then(|h| h.to_str().ok());
 
     if let Some(auth_value) = auth_header {
         if let Some(token) = auth_value.strip_prefix("Bearer ") {
@@ -189,20 +190,17 @@ fn generate_device_id(hostname: String, os: String) -> String {
 /// assert!(token.is_some());
 /// ```
 fn generate_jwt(device_id: String) -> Option<String> {
-    match std::env::var("JWT_SECRET") {
-        Ok(secret) => {
-            let encoding_key: EncodingKey = EncodingKey::from_secret(secret.as_bytes());
+    let secret: String = get_config_api().settings.jwt.clone();
 
-            let claims = Claims { device_id };
+    if secret.is_empty() {
+        display_msg(Some(&CratisError::TokenError("JWT Secret is empty!".to_string())), CratisErrorLevel::Warning, None);
+        return None
+    }
 
-            match encode(&Header::default(), &claims, &encoding_key) {
-                Ok(t) => Some(t),
-                Err(e) => {
-                    display_msg(Some(&CratisError::TokenError(e.to_string())), CratisErrorLevel::Warning, None);
-                    None
-                }
-            }
-        }
+    let encoding_key: EncodingKey = EncodingKey::from_secret(secret.as_bytes());
+    let claims = Claims { device_id };
+    match encode(&Header::default(), &claims, &encoding_key) {
+        Ok(t) => Some(t),
         Err(e) => {
             display_msg(Some(&CratisError::TokenError(e.to_string())), CratisErrorLevel::Warning, None);
             None
@@ -211,7 +209,12 @@ fn generate_jwt(device_id: String) -> Option<String> {
 }
 
 fn decode_token(token: &str) ->  Result<Claims, jsonwebtoken::errors::Error> {
-    let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
+    let secret: String = get_config_api().settings.jwt.clone();
+
+    if secret.is_empty() {
+        display_msg(Some(&CratisError::TokenError("JWT Secret is empty!".to_string())), CratisErrorLevel::Warning, None);
+        return Err(jsonwebtoken::errors::Error::from(jsonwebtoken::errors::ErrorKind::InvalidKeyFormat));
+    }
 
     let mut validation = Validation::default();
     validation.validate_exp = false;

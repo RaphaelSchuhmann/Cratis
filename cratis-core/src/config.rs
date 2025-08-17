@@ -54,9 +54,14 @@ pub struct AdvancedConfig {
 
 #[derive(Debug, Deserialize)]
 pub struct CratisServerConfig {
+    pub settings: CratisServerSettings,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CratisServerSettings {
     pub port: u16,
-    pub env: String,
     pub db: String,
+    pub jwt: String,
 }
 
 static CONFIG_CLI: OnceCell<CratisConfig> = OnceCell::new();
