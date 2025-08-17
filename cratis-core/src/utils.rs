@@ -7,6 +7,8 @@ use blake3::Hasher;
 use crate::error::{display_msg, CratisError, CratisResult, CratisErrorLevel};
 use crate::config::{CratisConfig};
 use glob::Pattern;
+use rand::distr::{Alphanumeric, SampleString};
+use rand::Rng;
 
 /// Verifies that a given path exists and is a directory in the filesystem.
 ///
@@ -379,4 +381,24 @@ pub fn load_file(file_path: PathBuf) -> CratisResult<(File, String)> {
 /// ```
 pub fn get_file_name(file_path: PathBuf) -> String {
     file_path.file_name().and_then(|os_str| os_str.to_str()).unwrap_or("unknown_file").to_string()
+}
+
+/// Generates a random alphanumeric string of the specified length.
+///
+/// # Arguments
+///
+/// * `length` - The desired length of the generated string
+///
+/// # Returns
+///
+/// A String containing random alphanumeric characters (a-z, A-Z, 0-9)
+///
+/// # Examples
+///
+/// ```ignore
+/// let random_id = generate_random_string(8);
+/// assert_eq!(random_id.len(), 8);
+/// ```
+pub fn generate_random_string(length: usize) -> String {
+    Alphanumeric.sample_string(&mut rand::rng(), length)
 }

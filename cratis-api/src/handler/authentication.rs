@@ -9,6 +9,7 @@ use serde_json::{json};
 use serde::{Deserialize, Serialize};
 use sha2::{Sha256, Digest};
 use uuid::Uuid;
+use cratis_core::utils::generate_random_string;
 use cratis_core::config::get_config_api;
 use cratis_core::error::{display_msg, CratisError, CratisErrorLevel};
 use crate::DB;
@@ -30,7 +31,8 @@ pub struct Device {
 // JWT Struct
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct Claims {
-    device_id: String
+    device_id: String,
+    jti: String,
 }
 
 /// Handles device registration requests.
@@ -198,7 +200,8 @@ fn generate_jwt(device_id: String) -> Option<String> {
     }
 
     let encoding_key: EncodingKey = EncodingKey::from_secret(secret.as_bytes());
-    let claims = Claims { device_id };
+    let jti: String = generate_random_string(6);
+    let claims = Claims { device_id, jti };
     match encode(&Header::default(), &claims, &encoding_key) {
         Ok(t) => Some(t),
         Err(e) => {
