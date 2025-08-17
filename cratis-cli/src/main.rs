@@ -8,7 +8,7 @@ mod cli;
 
 #[tokio::main]
 async fn main() {
-    load_config(TEMP_CONFIG_PATH);
+    load_config(TEMP_CONFIG_PATH, false);
     let cli_ = cli::Cli::parse();
 
     match cli_.command {
@@ -18,7 +18,7 @@ async fn main() {
             match register().await {
                 Ok(token) => {
                     display_msg(None, CratisErrorLevel::Info, Some("Registered successfully!".to_string()));
-                    match update_config("server.auth_token", Value::String(token)) {
+                    match update_config("server.auth_token", TEMP_CONFIG_PATH, Value::String(token)) {
                         Ok(_) => display_msg(None, CratisErrorLevel::Info, Some("Updated config successfully!".to_string())),
                         Err(e) => display_msg(Some(&e), CratisErrorLevel::Warning, None),
                     }
