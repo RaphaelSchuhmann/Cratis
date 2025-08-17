@@ -7,6 +7,8 @@ use std::sync::Arc;
 use once_cell::sync::Lazy;
 use cratis_core::config::{get_config_api, load_config, TEMP_API_CONFIG_PATH};
 use cratis_core::error::{display_msg, CratisError, CratisErrorLevel};
+// This is for the test endpoint only:
+// use http::StatusCode;
 
 mod handler;
 
@@ -21,6 +23,7 @@ async fn main() {
     // Router
     // let auth_routes = Router::new()
     //     // Put any routes that need authentication here
+    //     // .route("/test", get(test))
     //     .route_layer(middleware::from_fn(authenticate_middleware));
 
     let public_routes = Router::new()
@@ -35,3 +38,9 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", get_config_api().settings.port)).await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }
+
+// This is a temporary test endpoint to test the authentication system
+// Remove this endpoint when it is no longer needed
+// pub async fn test() -> StatusCode {
+//     StatusCode::IM_A_TEAPOT
+// }

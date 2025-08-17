@@ -485,6 +485,7 @@ dependencies = [
  "blake3",
  "glob",
  "once_cell",
+ "rand",
  "serde",
  "serde_yaml",
  "thiserror 2.0.12",
