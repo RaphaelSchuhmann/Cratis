@@ -24,6 +24,7 @@ pub struct ClientConfig {
 
 #[derive(Debug, Deserialize)]
 pub struct BackupConfig {
+    pub interval_seconds: u32,
     pub watch_directories: Vec<String>,
     pub exclude: Option<Vec<String>>,
 }
