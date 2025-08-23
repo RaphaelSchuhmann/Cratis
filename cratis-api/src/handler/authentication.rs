@@ -25,7 +25,6 @@ pub struct RegisterRequestData {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Device {
     device_id: String,
-    auth_token: String,
 }
 
 // JWT Struct
@@ -96,8 +95,8 @@ pub async fn register(Json(payload): Json<RegisterRequestData>) -> impl IntoResp
         None => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": "Internal Server Error" })))
     };
 
-    // Insert device_id and jwt into db
-    let result = collection.insert_one(Device {device_id, auth_token: jwt.clone()});
+    // Store device_id in db
+    let result = collection.insert_one(Device {device_id});
     if let Err(e) = result {
         display_msg(Some(&CratisError::DatabaseError(format!("Error inserting data: {}", e))), CratisErrorLevel::Warning, None);
         return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": "Internal Server Error" })))
