@@ -1,17 +1,13 @@
 #[allow(dead_code)]
-use axum::{Json, response::IntoResponse, http::StatusCode};
-use axum::middleware::Next;
-use axum::response::Response;
-use http::Request;
+use cratis_core::{utils::generate_random_string, config::get_config_api, error::{display_msg, CratisError, CratisErrorLevel}};
+use axum::{Json, response::IntoResponse, http::StatusCode, middleware::Next, response::Response};
 use jsonwebtoken::{encode, EncodingKey, Header, decode, DecodingKey, Validation, Algorithm};
 use polodb_core::{CollectionT, bson::doc, Collection};
-use serde_json::{json};
 use serde::{Deserialize, Serialize};
 use sha2::{Sha256, Digest};
+use serde_json::{json};
+use http::Request;
 use uuid::Uuid;
-use cratis_core::utils::generate_random_string;
-use cratis_core::config::get_config_api;
-use cratis_core::error::{display_msg, CratisError, CratisErrorLevel};
 use crate::DB;
 
 // Request Structs

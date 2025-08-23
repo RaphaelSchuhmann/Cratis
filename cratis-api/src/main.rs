@@ -1,12 +1,12 @@
 #[allow(unused_imports)]
-use std::path::PathBuf;
-use axum::{Router, routing::post, routing::get, middleware};
 use crate::handler::{authentication::{authenticate_middleware, register}, health_check::health_check};
+use cratis_core::{config::{get_config_api, load_config, TEMP_API_CONFIG_PATH}};
+use axum::{Router, routing::post, routing::get, middleware};
 use polodb_core::Database;
-use std::sync::Arc;
 use once_cell::sync::Lazy;
-use cratis_core::config::{get_config_api, load_config, TEMP_API_CONFIG_PATH};
-use cratis_core::error::{display_msg, CratisError, CratisErrorLevel};
+use std::path::PathBuf;
+use std::sync::Arc;
+
 // This is for the test endpoint only:
 // use http::StatusCode;
 
