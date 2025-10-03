@@ -1,15 +1,11 @@
-use cratis_core::error::{display_msg, CratisError, CratisErrorLevel, CratisResult};
-use cratis_core::utils::{is_path_file, get_files_in_directory, load_file};
 use clap_derive::{Parser, Subcommand};
-use std::fs::File;
-use std::path::PathBuf;
-use tokio::fs::File as TokioFile;
-use tokio_util::io::ReaderStream;
-use reqwest::{Client, Response, StatusCode};
-use sysinfo::System;
-use std::collections::HashMap;
-use serde_json::Value;
+use cratis_core::backup::backup;
 use cratis_core::config::get_config_cli;
+use cratis_core::error::{CratisError, CratisErrorLevel, CratisResult, display_msg};
+use reqwest::{Client, Response, StatusCode};
+use serde_json::Value;
+use std::collections::HashMap;
+use sysinfo::System;
 
 #[derive(Parser)]
 #[command(name = "cratis.db")]
@@ -87,24 +83,30 @@ pub async fn register() -> CratisResult<String> {
     (&mut device_info).insert("os".to_string(), os);
 
     let client: Client = Client::new();
-    let response: Response = client.post(format!("{}/register", get_config_cli().server.address))
+    let response: Response = client
+        .post(format!("{}/register", get_config_cli().server.address))
         .json(&device_info)
         .send()
         .await
         .map_err(|_| CratisError::RequestError("Unable to send request"))?;
 
     let status: StatusCode = response.status();
-    let response_body: String = response.text().await.map_err(|_| CratisError::RequestError("Invalid response"))?;
+    let response_body: String = response
+        .text()
+        .await
+        .map_err(|_| CratisError::RequestError("Invalid response"))?;
 
     if status.is_success() {
-        let json_value: Value = serde_json::from_str(&response_body).map_err(|_| CratisError::RequestError("Invalid response"))?;
+        let json_value: Value = serde_json::from_str(&response_body)
+            .map_err(|_| CratisError::RequestError("Invalid response"))?;
 
         if let Some(token) = json_value.get("token").and_then(|v| v.as_str()) {
             Ok(token.to_string())
         } else {
-            Err(CratisError::RequestError("Invalid response: Token missing!"))
+            Err(CratisError::RequestError(
+                "Invalid response: Token missing!",
+            ))
         }
-
     } else if status == StatusCode::NOT_FOUND {
         Err(CratisError::RequestError("Server not found"))
     } else if status == StatusCode::CONFLICT {
@@ -116,10 +118,13 @@ pub async fn register() -> CratisResult<String> {
 
 pub async fn ping_server() -> CratisResult<String> {
     let client: Client = Client::new();
-    let response: Response = client.get(format!("{}/ping", get_config_cli().server.address))
+    let response: Response = client
+        .get(format!("{}/ping", get_config_cli().server.address))
         .send()
         .await
-        .map_err(|_| CratisError::ConnectionIssue("Unable to send request, server is not reachable!"))?;
+        .map_err(|_| {
+            CratisError::ConnectionIssue("Unable to send request, server is not reachable!")
+        })?;
 
     let status: StatusCode = response.status();
 
@@ -131,74 +136,12 @@ pub async fn ping_server() -> CratisResult<String> {
 }
 
 pub async fn backup_now() -> CratisResult<String> {
-    let watch_dirs = &get_config_cli().backup.watch_directories;
+    let status: http::status::StatusCode = backup().await;
 
-    let mut files_to_load: Vec<PathBuf> = Vec::new();
-
-    for dir in watch_dirs {
-        if is_path_file(dir) {
-            files_to_load.push(PathBuf::from(dir));
-        } else {
-            let files: CratisResult<Vec<PathBuf>> = get_files_in_directory(dir);
-            match files {
-                Ok(files) => {
-                    files_to_load.extend(files);
-                }
-                Err(e) => {
-                    display_msg(Some(&e), CratisErrorLevel::Warning, None)
-                }
-            }
-        }
-    }
-
-    let mut loaded_files: Vec<(File, String)> = Vec::new();
-
-    for file in files_to_load {
-        let loaded_file = load_file(file);
-        match loaded_file {
-            Ok(file) => {
-                loaded_files.push(file);
-            }
-            Err(e) => {
-                display_msg(Some(&e), CratisErrorLevel::Warning, None)
-            }
-        }
-    }
-
-    // Put loaded files into request body
-
-    let mut form = reqwest::multipart::Form::new();
-
-    for (std_file, file_name) in loaded_files {
-        let tokio_file: TokioFile = TokioFile::from_std(std_file);
-        let file_body_stream = ReaderStream::new(tokio_file);
-        let body = reqwest::Body::wrap_stream(file_body_stream);
-        let file_part = reqwest::multipart::Part::stream(body).file_name(file_name).mime_str("application/octet-stream").map_err(|_| CratisError::RequestError("Unable to send file"))?;
-
-        form = form.part("files", file_part);
-    }
-
-    let client = Client::new();
-    let config = get_config_cli();
-
-    // Send request
-    let response = client.post(format!("{}/backup", config.server.address))
-        .bearer_auth(config.server.auth_token.clone())
-        .multipart(form)
-        .send()
-        .await
-        .map_err(|_| CratisError::RequestError("Unable to send request"))?;
-
-    let status = response.status();
-    let response_body: String = response.text().await.map_err(|_| CratisError::RequestError("Invalid response"))?;
-
-    if status.is_success() {
-        Ok(response_body)
-    } else if status == StatusCode::NOT_FOUND {
-        Err(CratisError::RequestError("Server not found"))
-    } else if status == StatusCode::UNAUTHORIZED {
-        Err(CratisError::RequestError("Unauthorized"))
-    } else {
-        Err(CratisError::RequestError("Invalid response"))
+    match status {
+        s if s.is_success() => Ok("Files backed up successfully!".to_string()),
+        http::status::StatusCode::NOT_FOUND => Err(CratisError::RequestError("Server not found")),
+        http::status::StatusCode::UNAUTHORIZED => Err(CratisError::RequestError("Unauthorized")),
+        _ => Err(CratisError::RequestError("Invalid response")),
     }
 }

@@ -344,7 +344,7 @@ pub fn get_files_in_directory(dir: &String) -> CratisResult<Vec<PathBuf>> {
 ///     Err(e) => println!("Error: {}", e),
 /// }
 /// ```
-pub fn load_file(file_path: PathBuf) -> CratisResult<(File, String)> {
+pub fn load_file(file_path: PathBuf) -> CratisResult<(File, String, Option<String>)> {
     let file = File::open(&file_path).map_err(|e| {
         if e.kind() == std::io::ErrorKind::NotFound {
             // Warning
@@ -354,7 +354,7 @@ pub fn load_file(file_path: PathBuf) -> CratisResult<(File, String)> {
         }
     })?;
 
-    Ok((file, get_file_name(file_path)))
+    Ok((file, get_file_name(file_path.clone()), Some(file_path.to_str().unwrap().to_string())))
 }
 
 /// Extracts the filename from a path.
