@@ -41,7 +41,7 @@ struct Claims {
 /// * `payload` - JSON payload containing hostname and OS information
 ///
 /// # Returns
-///k
+///
 /// * `200 OK` with JWT token if registration is successful
 /// * `400 Bad Request` if hostname or OS is empty
 /// * `409 Conflict` if device already exists
