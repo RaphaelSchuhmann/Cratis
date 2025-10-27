@@ -1,15 +1,31 @@
 version: 43
 jobs:
-	- name : "Push to GitHub"
-    secrets:
-    	- GitHub_PAT
-	steps:
-    	- name: "Sync to Remote"
-        type: "Repository Sync / PUsh to Remote"
-        params:
-        	remoteUrl: "https://github.com/RaphaelSchuhmann/cratis.git"
-            userName: "RaphaelSchuhmann"
-            password: "$$vars.GitHub_PAT"
-            ref: "refs/heads/*"
-            force: true
-		when: "When Changes Published"
+- name: Push to GitHub
+  steps:
+  - type: PullRepository
+    name: Pull from GitHub
+    remoteUrl: https://github.com/RaphaelSchuhmann/cratis.git
+    userName: RaphaelSchuhmann
+    passwordSecret: GitHub-PAT
+    targetProject: Cratis
+    accessTokenSecret: GitHub-PAT
+    refs: refs/heads/* refs/tags/*
+    withLfs: false
+    force: false
+    condition: SUCCESSFUL
+    optional: false
+  - type: PushRepository
+    name: Push to GitHub
+    remoteUrl: https://github.com/RaphaelSchuhmann/cratis.git
+    userName: RaphaelSchuhmann
+    passwordSecret: GitHub-PAT
+    force: false
+    condition: SUCCESSFUL
+    optional: false
+  triggers:
+  - type: BranchUpdateTrigger
+    userMatch: anyone
+  retryCondition: never
+  maxRetries: 3
+  retryDelay: 30
+  timeout: 60
