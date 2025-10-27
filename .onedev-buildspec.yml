@@ -4,22 +4,22 @@ jobs:
   steps:
   - type: PullRepository
     name: Pull from GitHub
-    remoteUrl: https://github.com/RaphaelSchuhmann/cratis.git
+    remoteUrl: https://github.com/RaphaelSchuhmann/Cratis.git
     userName: RaphaelSchuhmann
     passwordSecret: GitHub-PAT
     targetProject: Cratis
     accessTokenSecret: GitHub-PAT
     refs: refs/heads/* refs/tags/*
     withLfs: false
-    force: false
+    force: true
     condition: SUCCESSFUL
     optional: false
   - type: PushRepository
     name: Push to GitHub
-    remoteUrl: https://github.com/RaphaelSchuhmann/cratis.git
+    remoteUrl: https://github.com/RaphaelSchuhmann/Cratis.git
     userName: RaphaelSchuhmann
     passwordSecret: GitHub-PAT
-    force: false
+    force: true
     condition: SUCCESSFUL
     optional: false
   triggers:
