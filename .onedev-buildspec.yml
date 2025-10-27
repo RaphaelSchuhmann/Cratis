@@ -1,6 +1,7 @@
 version: 43
 jobs:
-- name: Push to GitHub
+- name: Update GitHub
+  jobExecutor: server-docker
   steps:
   - type: PullRepository
     name: Pull from GitHub
