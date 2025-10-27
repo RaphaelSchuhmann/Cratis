@@ -4,7 +4,7 @@
 
 ---
 
-## 🧠 Features (WIP)
+## Features (WIP)
 
 - Real-time file watching using a cross-platform watcher.
 - Timestamp-based versioning of individual files.
