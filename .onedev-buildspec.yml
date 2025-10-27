@@ -5,7 +5,7 @@ jobs:
   steps:
   - type: PullRepository
     name: Pull from GitHub
-    remoteUrl: https://github.com/RaphaelSchuhmann/Cratis.git
+    remoteUrl: https://github.com/RaphaelSchuhmann/cratis.git
     userName: RaphaelSchuhmann
     passwordSecret: GitHub-PAT
     targetProject: Cratis
