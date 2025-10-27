@@ -6,7 +6,7 @@ jobs:
   - type: PullRepository
     name: Pull from GitHub
     remoteUrl: https://github.com/RaphaelSchuhmann/Cratis.git
-    userName: RaphaelSchuhmann
+    userName: DevOps
     passwordSecret: GitHub-PAT
     targetProject: Cratis
     accessTokenSecret: GitHub-PAT
@@ -18,7 +18,7 @@ jobs:
   - type: PushRepository
     name: Push to GitHub
     remoteUrl: https://github.com/RaphaelSchuhmann/Cratis.git
-    userName: RaphaelSchuhmann
+    userName: DevOps
     passwordSecret: GitHub-PAT
     force: true
     condition: SUCCESSFUL
