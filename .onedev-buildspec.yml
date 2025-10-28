@@ -1,26 +1,25 @@
 version: 43
 jobs:
-- name: Update GitHub
-  jobExecutor: server-docker
+- name: Sync GitHub
   steps:
-  - type: PullRepository
-    name: Pull from GitHub
-    remoteUrl: https://github.com/RaphaelSchuhmann/cratis.git
-    userName: RaphaelSchuhmann
-    passwordSecret: GitHub-PAT
-    targetProject: Cratis
-    accessTokenSecret: GitHub-PAT
-    refs: refs/heads/* refs/tags/*
+  - type: CheckoutStep
+    name: checkout
+    cloneCredential:
+      type: DefaultCredential
     withLfs: false
-    force: true
+    withSubmodules: false
     condition: SUCCESSFUL
     optional: false
-  - type: PushRepository
-    name: Push to GitHub
-    remoteUrl: https://github.com/RaphaelSchuhmann/Cratis.git
-    userName: RaphaelSchuhmann
-    passwordSecret: GitHub-PAT
-    force: true
+  - type: CommandStep
+    name: sync
+    runInContainer: true
+    image: alpine/git:1.0.7
+    interpreter:
+      type: DefaultInterpreter
+      commands: |
+        git config --global --unset http.extraHeader
+        git push -f https://raphaelschuhmann:@secret:GitHub-PAT@@@github.com/raphaelschuhmann/cratis.git
+    useTTY: true
     condition: SUCCESSFUL
     optional: false
   triggers:
