@@ -14,4 +14,4 @@
 
 ---
 ## Authors
-[@Lum1n0sity](https://www.github.com/Lum1n0sity)
+[@RaphaelSchuhmann](https://www.github.com/RaphaelSchuhmann)
